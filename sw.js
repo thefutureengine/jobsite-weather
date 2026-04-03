@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jobsite-wx-v8';
+const CACHE_NAME = 'jobsite-wx-v9';
 const PRECACHE = [
   '/',
   '/index.html',
