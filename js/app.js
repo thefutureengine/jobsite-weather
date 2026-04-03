@@ -161,8 +161,9 @@ if(!Array.isArray(savedLocs))savedLocs=[];
 
 renderLocs();
 renderFounderBadge();
-renderProjectBar();
+updateProjectPill();
 showTrialToast();
+handleAuthCallback();
 
 
 // ── SWIPE GESTURES ────────────────────────────────────────

@@ -1,9 +1,10 @@
-const CACHE_NAME = 'jobsite-wx-v7';
+const CACHE_NAME = 'jobsite-wx-v8';
 const PRECACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/css/app.css',
+  '/js/auth.js',
   '/js/app.js',
   '/js/trial.js',
   '/js/weather.js',

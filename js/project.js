@@ -1,15 +1,29 @@
-// ── PROJECT MODE ──────────────────────────────────────────
-function renderProjectBar(){
-  const existing=document.getElementById('projectBar');
-  if(existing)existing.remove();
-  const hasAccess=isProject();
-  const bar=document.createElement('div');
-  bar.id='projectBar';
-  bar.style.cssText='background:#0a1520;border-bottom:1px solid rgba(255,255,255,0.06);padding:6px 16px;display:flex;align-items:center;justify-content:space-between;';
-  const pillStyle=hasAccess?'background:rgba(245,166,35,0.12);border:1.5px solid #f5a623;color:#f5a623;':'background:transparent;border:1.5px solid rgba(245,166,35,0.2);color:rgba(245,166,35,0.35);';
-  bar.innerHTML=`<button onclick="${hasAccess?'openProjectMode()':'showProjectGate()'}" style="${pillStyle}font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.08em;padding:5px 14px;border-radius:20px;cursor:pointer;display:flex;align-items:center;gap:6px;">📋 PROJECT MODE ${hasAccess?'':'🔒'}</button><span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;color:rgba(245,166,35,${hasAccess?'0.5':'0.2'});letter-spacing:0.1em">${hasAccess?'ACTIVE':'PROJECT PLAN'}</span>`;
-  const tabs=document.getElementById('navTabs');
-  if(tabs)tabs.after(bar);
+// project.js — Project Mode full workspace
+
+function getSavedLocs(){return JSON.parse(localStorage.getItem('jw_locs')||'[]');}
+
+function deleteLoc(lat,lon){
+  let locs=getSavedLocs();
+  locs=locs.filter(l=>!(Math.abs(l.lat-lat)<0.001&&Math.abs(l.lon-lon)<0.001));
+  localStorage.setItem('jw_locs',JSON.stringify(locs));
+  savedLocs=locs;
+}
+
+function updateProjectPill(){
+  const pill=document.getElementById('projectPill');
+  if(!pill)return;
+  if(isProject()){
+    pill.style.background='rgba(245,166,35,0.12)';pill.style.border='1.5px solid #f5a623';pill.style.color='#f5a623';
+    pill.innerHTML='📋 PROJECT';
+  }else{
+    pill.style.background='transparent';pill.style.border='1.5px solid rgba(245,166,35,0.2)';pill.style.color='rgba(245,166,35,0.3)';
+    pill.innerHTML='📋 PROJECT 🔒';
+  }
+}
+
+function handleProjectTap(){
+  if(isProject())openProjectMode();
+  else showProjectGate();
 }
 
 function openProjectMode(){
@@ -18,7 +32,18 @@ function openProjectMode(){
   const panel=document.createElement('div');
   panel.id='projectPanel';
   panel.style.cssText='position:fixed;inset:0;z-index:500;background:#0a1520;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden;';
-  panel.innerHTML=`<div style="background:#0d1e2e;border-bottom:2px solid #f5a623;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:12px;flex-shrink:0;"><button onclick="closeProjectMode()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:8px;width:36px;height:36px;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:0.06em;color:#f5a623">📋 PROJECT MODE</div><div style="font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.08em">MULTI-SITE COMMAND CENTER</div></div></div><div style="flex:1;overflow-y:auto;padding:16px" id="projectContent"><div style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0">Loading your job sites...</div></div>`;
+  panel.innerHTML=`
+    <div style="background:#0d1e2e;border-bottom:2px solid #f5a623;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:12px;flex-shrink:0;">
+      <button onclick="closeProjectMode()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:8px;width:36px;height:36px;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
+      <div style="flex:1"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:0.06em;color:#f5a623">📋 PROJECT MODE</div><div style="font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.08em">MULTI-SITE COMMAND CENTER</div></div>
+      <button onclick="showAddSiteFlow()" style="background:rgba(245,166,35,0.15);border:1px solid #f5a623;border-radius:8px;padding:6px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.06em;">+ ADD SITE</button>
+    </div>
+    <div style="background:#0d1e2e;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;flex-shrink:0;">
+      <button class="pm-tab" id="pmTabSites" onclick="switchPMTab('sites')" style="flex:1;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.06em;background:none;border:none;color:#f5a623;border-bottom:2px solid #f5a623;cursor:pointer;">SITES</button>
+      <button class="pm-tab" id="pmTabCalendar" onclick="switchPMTab('calendar')" style="flex:1;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.06em;background:none;border:none;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer;">7-DAY VIEW</button>
+      <button class="pm-tab" id="pmTabDispatch" onclick="switchPMTab('dispatch')" style="flex:1;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.06em;background:none;border:none;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer;">DISPATCH</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;" id="projectContent"><div style="padding:20px;text-align:center;color:var(--muted)">Loading sites...</div></div>`;
   document.body.appendChild(panel);
   document.body.style.overflow='hidden';
   requestAnimationFrame(()=>{panel.style.transform='translateX(0)';});
@@ -32,48 +57,210 @@ function closeProjectMode(){
   setTimeout(()=>{panel.remove();document.body.style.overflow='';},300);
 }
 
-function showProjectGate(){
-  document.getElementById('modalInner').innerHTML=`<button class="modal-close" onclick="closeModalBtn()">✕</button><div style="padding:1.5rem 1rem;text-align:center"><div style="font-size:28px;margin-bottom:12px">📋</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px">Project Mode</div><div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">Built for GCs and architects running multiple sites.<br>Multi-site dashboard, predictive alerts, and crew dispatch recommendations.</div><a href="${STRIPE_PROJECT}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:0.06em;padding:14px;border-radius:var(--radius);text-decoration:none;text-align:center;margin-bottom:10px">UPGRADE TO PROJECT · $19.99/YEAR →</a><button onclick="closeModalBtn()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px">Not right now</button></div>`;
-  navPush('modal');
-  document.getElementById('dayModal').classList.add('open');
+function switchPMTab(tab){
+  document.querySelectorAll('.pm-tab').forEach(t=>{t.style.color='rgba(255,255,255,0.4)';t.style.borderBottom='2px solid transparent';});
+  const id='pmTab'+tab.charAt(0).toUpperCase()+tab.slice(1);
+  const active=document.getElementById(id);
+  if(active){active.style.color='#f5a623';active.style.borderBottom='2px solid #f5a623';}
+  if(tab==='sites')loadProjectSites();
+  if(tab==='calendar')loadProjectCalendar();
+  if(tab==='dispatch')loadProjectDispatch();
 }
 
+function showProjectGate(){
+  document.getElementById('modalInner').innerHTML=`<button class="modal-close" onclick="closeModalBtn()">✕</button><div style="padding:1.5rem 1rem;text-align:center"><div style="font-size:28px;margin-bottom:12px">📋</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px">Project Mode</div><div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">Built for GCs and architects running multiple sites.<br>Multi-site dashboard, predictive alerts, and crew dispatch.</div><a href="${STRIPE_PROJECT}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:0.06em;padding:14px;border-radius:var(--radius);text-decoration:none;text-align:center;margin-bottom:10px">UPGRADE TO PROJECT · $19.99/YEAR →</a><button onclick="closeModalBtn()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px">Not right now</button></div>`;
+  navPush('modal');document.getElementById('dayModal').classList.add('open');
+}
+
+// ── SITES TAB ─────────────────────────────────────────────
 async function loadProjectSites(){
   const content=document.getElementById('projectContent');
   if(!content)return;
-  if(!savedLocs.length){content.innerHTML='<div style="text-align:center;padding:40px 16px"><div style="font-size:32px;margin-bottom:12px">📍</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:var(--text);margin-bottom:8px">No job sites saved yet</div><div style="font-size:13px;color:var(--muted)">Save locations from the main screen to see them here.</div></div>';return;}
-  const siteData=await Promise.allSettled(savedLocs.map(async site=>{
-    try{
-      const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,wind_speed_10m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);
-      return{...site,data:await r.json()};
-    }catch(e){return{...site,data:null};}
+  const sites=getSavedLocs();
+  if(!sites.length){content.innerHTML=`<div style="text-align:center;padding:40px 16px"><div style="font-size:40px;margin-bottom:12px">📍</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--text);margin-bottom:8px">No job sites yet</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">Add your first site to get started.</div><button onclick="showAddSiteFlow()" style="background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:12px 24px;border:none;border-radius:var(--radius);cursor:pointer;">+ ADD FIRST SITE</button></div>`;return;}
+  content.innerHTML='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase">YOUR SITES TODAY</div>';
+  const siteData=await Promise.all(sites.map(async site=>{
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
   }));
-  const sites=siteData.filter(r=>r.status==='fulfilled').map(r=>r.value);
-  let html='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">YOUR SITES TODAY</div>';
-  sites.forEach(site=>{
-    if(!site.data){html+=`<div class="project-site-card"><div style="font-size:13px;color:var(--text)">${site.label}</div><div style="font-size:11px;color:var(--muted)">Could not load</div></div>`;return;}
-    const c=site.data.current,temp=Math.round(c.temperature_2m),wind=Math.round(c.wind_speed_10m),wmo=c.weather_code,rh=Math.round(c.relative_humidity_2m),precip=c.precipitation||0;
-    const alerts=getTradeAlerts(temp,wind,precip,wmo,rh);
-    const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
-    const status=hasDanger?'HOLD':hasCaution?'CAUTION':'GO';
-    const statusColor=hasDanger?'#e53935':hasCaution?'#ff9800':'#4caf50';
-    const statusEmoji=hasDanger?'🔴':hasCaution?'🟡':'🟢';
-    const borderColor=hasDanger?'rgba(229,57,53,0.3)':hasCaution?'rgba(255,152,0,0.3)':'rgba(76,175,80,0.3)';
-    const topAlert=alerts[0]?.msg||`${temp}°F · Wind ${wind}mph · Clear`;
-    const tom=new Date();tom.setDate(tom.getDate()+1);
-    const tomorrowHrs=(site.data.hourly?.time||[]).map((t,i)=>({t:new Date(t),prob:site.data.hourly.precipitation_probability[i]})).filter(h=>h.t.getDate()===tom.getDate()&&h.t.getHours()<12);
-    const tomorrowRain=tomorrowHrs.filter(h=>h.prob>60);
-    const tAlert=tomorrowRain.length>=3?`⚡ Tomorrow: ${Math.round(tomorrowRain[0].prob)}% rain before noon`:null;
-    html+=`<div class="project-site-card" onclick="closeProjectMode();loadByLatLon(${site.lat},${site.lon},'${site.label.replace(/'/g,"\\'")}')" style="border-color:${borderColor};cursor:pointer;margin-bottom:10px"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px"><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text)">${site.label}</div></div><div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:${statusColor};text-align:right">${statusEmoji} ${status}</div></div><div style="font-size:12px;color:var(--muted)">${topAlert}</div>${tAlert?`<div style="font-size:11px;color:#f5a623;margin-top:6px">${tAlert}</div>`:''}<div style="font-size:10px;color:rgba(255,255,255,0.2);margin-top:6px;text-align:right">Tap to view →</div></div>`;
+  siteData.forEach(site=>{content.innerHTML+=buildSiteCard(site);});
+  content.innerHTML+='<div style="height:20px"></div>';
+}
+
+function buildSiteCard(site){
+  if(!site.weatherData)return`<div style="margin:10px 16px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px"><div style="font-size:13px;color:var(--text)">${site.label}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Could not load</div></div>`;
+  const c=site.weatherData.current,temp=Math.round(c.temperature_2m),wind=Math.round(c.wind_speed_10m),wmo=c.weather_code,rh=Math.round(c.relative_humidity_2m),precip=c.precipitation||0;
+  const alerts=getTradeAlerts(temp,wind,precip,wmo,rh);
+  const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
+  const status=hasDanger?'HOLD':hasCaution?'CAUTION':'GO';
+  const statusColor=hasDanger?'#e53935':hasCaution?'#ff9800':'#4caf50';
+  const statusEmoji=hasDanger?'🔴':hasCaution?'🟡':'🟢';
+  const borderColor=hasDanger?'rgba(229,57,53,0.35)':hasCaution?'rgba(255,152,0,0.35)':'rgba(76,175,80,0.35)';
+  const topAlert=alerts[0]?.msg||'No issues — good conditions';
+  // Tomorrow AM check
+  const tom=new Date();tom.setDate(tom.getDate()+1);
+  const tHrs=(site.weatherData.hourly?.time||[]).map((t,i)=>({t:new Date(t),prob:site.weatherData.hourly.precipitation_probability[i]||0})).filter(h=>h.t.getDate()===tom.getDate()&&h.t.getHours()<12);
+  const tRain=tHrs.filter(h=>h.prob>60);
+  const tAlert=tRain.length>=3?`⚡ Tomorrow AM: ${Math.round(tRain[0].prob)}% rain`:null;
+  const noteKey='jw_note_'+site.label;
+  const noteVal=localStorage.getItem(noteKey)||'';
+  return`<div style="margin:10px 16px;background:var(--surface3);border:1px solid ${borderColor};border-radius:var(--radius);overflow:hidden">
+    <div style="padding:14px 14px 10px;display:flex;align-items:flex-start;justify-content:space-between">
+      <div style="flex:1"><div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:var(--text)">${site.label}</div>${site.projectName?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${site.projectName}</div>`:''}${site.trade?`<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;text-transform:uppercase;letter-spacing:0.05em">${TRADE_CONFIG[site.trade]?.name||site.trade}</div>`:''}</div>
+      <div style="text-align:right;flex-shrink:0;margin-left:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;color:${statusColor}">${statusEmoji} ${status}</div><div style="font-size:10px;color:rgba(255,255,255,0.3)">${temp}°F · ${wind}mph</div></div>
+    </div>
+    <div style="padding:0 14px 10px;font-size:12px;color:var(--muted)">${topAlert}</div>
+    ${tAlert?`<div style="padding:6px 14px;background:rgba(245,166,35,0.08);border-top:1px solid rgba(245,166,35,0.15);font-size:11px;color:#f5a623">${tAlert}</div>`:''}
+    <div style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 14px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.08em;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:6px">SITE NOTES</div><textarea placeholder="Add a note..." onblur="savePMNote('${site.label.replace(/'/g,"\\'")}',this.value)" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px;font-size:12px;color:var(--text);font-family:'Barlow',sans-serif;resize:none;min-height:50px;box-sizing:border-box;">${noteVal}</textarea></div>
+    <div style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 14px;display:flex;gap:8px">
+      <button onclick="viewSiteConditions(${site.lat},${site.lon},'${site.label.replace(/'/g,"\\'")}')" style="flex:1;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.04em;">VIEW CONDITIONS</button>
+      <button onclick="editSiteMeta('${site.label.replace(/'/g,"\\'")}')" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);cursor:pointer;">EDIT</button>
+      <button onclick="confirmDeleteSite('${site.label.replace(/'/g,"\\'")}')" style="background:rgba(229,57,53,0.08);border:1px solid rgba(229,57,53,0.2);border-radius:6px;padding:8px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(229,57,53,0.6);cursor:pointer;">✕</button>
+    </div>
+  </div>`;
+}
+
+function savePMNote(label,value){localStorage.setItem('jw_note_'+label,value);if(typeof saveNoteToSupabase==='function')saveNoteToSupabase(label,value);}
+
+function viewSiteConditions(lat,lon,label){
+  sessionStorage.setItem('jw_came_from_project','true');
+  closeProjectMode();
+  loadByLatLon(lat,lon,label);
+}
+
+function checkProjectReturn(){
+  if(sessionStorage.getItem('jw_came_from_project')==='true'){
+    const topbar=document.querySelector('.topbar');if(!topbar)return;
+    const existing=document.getElementById('projectReturnBtn');if(existing)existing.remove();
+    const btn=document.createElement('button');btn.id='projectReturnBtn';
+    btn.onclick=()=>{sessionStorage.removeItem('jw_came_from_project');btn.remove();openProjectMode();};
+    btn.style.cssText='background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:4px 10px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.04em;margin-left:8px;';
+    btn.textContent='‹ PROJECTS';
+    topbar.appendChild(btn);
+  }
+}
+
+function confirmDeleteSite(label){
+  if(!confirm('Remove '+label+'?'))return;
+  let locs=getSavedLocs();
+  locs=locs.filter(l=>l.label!==label);
+  localStorage.setItem('jw_locs',JSON.stringify(locs));
+  savedLocs=locs;
+  loadProjectSites();
+}
+
+function editSiteMeta(label){
+  const sites=getSavedLocs();const site=sites.find(s=>s.label===label)||{};
+  const content=document.getElementById('projectContent');if(!content)return;
+  content.innerHTML=`<div style="padding:20px 16px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px">EDIT SITE — ${label}</div>
+    <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:6px">Project Name</label><input id="editProjectName" value="${(site.projectName||'').replace(/"/g,'&quot;')}" placeholder="e.g. School Build A" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;color:var(--text);box-sizing:border-box;"/></div>
+    <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:6px">Trade</label><select id="editTrade" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text);">${Object.entries(TRADE_CONFIG).map(([k,v])=>'<option value="'+k+'" '+(k===(site.trade||'')?'selected':'')+'>'+v.name+'</option>').join('')}</select></div>
+    <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:6px">GC / Owner Contact</label><input id="editGCContact" value="${(site.gcContact||'').replace(/"/g,'&quot;')}" placeholder="Name or phone" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;color:var(--text);box-sizing:border-box;"/></div>
+    <div style="margin-bottom:20px"><label style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:6px">Crew Size</label><input id="editCrewSize" type="number" value="${site.crewSize||''}" placeholder="0" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;color:var(--text);box-sizing:border-box;"/></div>
+    <button onclick="saveSiteMeta('${label.replace(/'/g,"\\'")}')" style="width:100%;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;padding:12px;border:none;border-radius:var(--radius);cursor:pointer;margin-bottom:10px">SAVE</button>
+    <button onclick="loadProjectSites()" style="width:100%;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted);cursor:pointer">CANCEL</button></div>`;
+}
+
+function saveSiteMeta(label){
+  const sites=getSavedLocs();const site=sites.find(s=>s.label===label);if(!site)return;
+  site.projectName=document.getElementById('editProjectName')?.value?.trim()||'';
+  site.trade=document.getElementById('editTrade')?.value||'general';
+  site.gcContact=document.getElementById('editGCContact')?.value?.trim()||'';
+  site.crewSize=document.getElementById('editCrewSize')?.value||'';
+  localStorage.setItem('jw_locs',JSON.stringify(sites));savedLocs=sites;
+  loadProjectSites();
+}
+
+// ── ADD SITE FLOW ─────────────────────────────────────────
+function showAddSiteFlow(){
+  const content=document.getElementById('projectContent');if(!content)return;
+  content.innerHTML=`<div style="padding:20px 16px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">ADD JOB SITE</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">Enter a ZIP code</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px"><input id="addSiteZip" type="tel" inputmode="numeric" maxlength="5" placeholder="ZIP code" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;color:var(--text);"/><button onclick="searchAddSite()" style="background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:10px 16px;border:none;border-radius:var(--radius-sm);cursor:pointer;">GO</button></div>
+    <div id="addSiteResult"></div>
+    <button onclick="loadProjectSites()" style="width:100%;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px">CANCEL</button></div>`;
+  document.getElementById('addSiteZip')?.focus();
+}
+
+async function searchAddSite(){
+  const zip=document.getElementById('addSiteZip')?.value?.trim()||'';
+  const result=document.getElementById('addSiteResult');
+  if(zip.length!==5||isNaN(zip)){if(result)result.innerHTML='<div style="color:#ff6b6b;font-size:12px">Enter a valid 5-digit ZIP</div>';return;}
+  if(result)result.innerHTML='<div style="color:var(--muted);font-size:12px">Searching...</div>';
+  try{
+    const geo=await geoSearch(zip);
+    const label=geo.name+(geo.admin1?', '+geo.admin1:'');
+    if(result)result.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">📍 ${label}</div>
+      <div style="margin-bottom:10px"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px">Project Name (optional)</label><input id="newProjectName" placeholder="e.g. School Build A" style="width:100%;background:#0a1520;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);box-sizing:border-box;"/></div>
+      <div style="margin-bottom:10px"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px">Trade</label><select id="newTrade" style="width:100%;background:#0a1520;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);">${Object.entries(TRADE_CONFIG).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('')}</select></div>
+      <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px">GC / Owner (optional)</label><input id="newGCContact" placeholder="Name or phone" style="width:100%;background:#0a1520;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);box-sizing:border-box;"/></div>
+      <button onclick="confirmAddSite(${geo.latitude},${geo.longitude},'${label.replace(/'/g,"\\'")}')" style="width:100%;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:11px;border:none;border-radius:var(--radius-sm);cursor:pointer;">ADD THIS SITE →</button></div>`;
+  }catch(e){if(result)result.innerHTML='<div style="color:#ff6b6b;font-size:12px">ZIP not found. Try another.</div>';}
+}
+
+function confirmAddSite(lat,lon,label){
+  const sites=getSavedLocs();
+  const maxLocs=isProject()?10:isCrew()?5:isPro()?5:1;
+  if(sites.length>=maxLocs){alert('You\'ve reached your '+maxLocs+' site limit.');return;}
+  sites.push({lat,lon,label,projectName:document.getElementById('newProjectName')?.value?.trim()||'',trade:document.getElementById('newTrade')?.value||'general',gcContact:document.getElementById('newGCContact')?.value?.trim()||''});
+  localStorage.setItem('jw_locs',JSON.stringify(sites));savedLocs=sites;
+  loadProjectSites();
+}
+
+// ── 7-DAY CALENDAR ────────────────────────────────────────
+async function loadProjectCalendar(){
+  const content=document.getElementById('projectContent');if(!content)return;
+  content.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Loading forecast...</div>';
+  const sites=getSavedLocs();
+  if(!sites.length){content.innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted)">No sites added yet</div>';return;}
+  const forecasts=await Promise.all(sites.map(async s=>{
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_probability_max,weathercode,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...s,forecast:(await r.json()).daily};}catch(e){return{...s,forecast:null};}
+  }));
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const today=new Date();
+  let html='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">7-DAY WORKABILITY</div>';
+  html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:0 16px;margin-bottom:4px"><div></div>${Array.from({length:7},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()+i);return`<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.05em">${i===0?'TODAY':days[d.getDay()]}</div>`;}).join('')}</div>`;
+  forecasts.forEach(site=>{
+    if(!site.forecast)return;
+    html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:4px 16px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${site.projectName||site.label.split(',')[0]}</div>${(site.forecast.weathercode||[]).slice(0,7).map((wmo,i)=>{
+      const precip=site.forecast.precipitation_probability_max[i]||0;const wind=site.forecast.wind_speed_10m_max[i]||0;const tempMax=site.forecast.temperature_2m_max[i]||50;
+      const alerts=getTradeAlerts(tempMax,wind,precip>50?0.5:0,wmo,50);
+      const bad=alerts.some(a=>a.level==='danger')||precip>70;const warn=alerts.some(a=>a.level==='caution')||precip>40;
+      return`<div style="text-align:center;font-size:14px" title="${precip}% rain · ${Math.round(wind)}mph">${bad?'🔴':warn?'🟡':'🟢'}</div>`;
+    }).join('')}</div>`;
   });
+  html+='<div style="padding:12px 16px;font-size:10px;color:rgba(255,255,255,0.2)">Based on 7-day forecast data</div>';
   content.innerHTML=html;
 }
 
-// ── TIER UPGRADE FUNCTIONS ─────────────────────────────────
+// ── DISPATCH VIEW ─────────────────────────────────────────
+async function loadProjectDispatch(){
+  const content=document.getElementById('projectContent');if(!content)return;
+  content.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Loading dispatch...</div>';
+  const sites=getSavedLocs();
+  if(!sites.length){content.innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted)">No sites added yet</div>';return;}
+  const siteData=await Promise.all(sites.map(async s=>{
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...s,weatherData:await r.json()};}catch(e){return{...s,weatherData:null};}
+  }));
+  const ranked=siteData.map(s=>{
+    if(!s.weatherData)return{...s,status:'UNKNOWN',priority:99,topAlert:'No data'};
+    const c=s.weatherData.current;const alerts=getTradeAlerts(Math.round(c.temperature_2m),Math.round(c.wind_speed_10m),c.precipitation||0,c.weather_code,Math.round(c.relative_humidity_2m));
+    const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
+    return{...s,status:hasDanger?'HOLD':hasCaution?'CAUTION':'GO',priority:hasDanger?3:hasCaution?2:1,topAlert:alerts[0]?.msg||'Clear conditions'};
+  }).sort((a,b)=>a.priority-b.priority);
+  let html=`<div style="padding:12px 16px 0;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">TODAY'S DISPATCH PRIORITY</div><div style="padding:0 16px 12px;font-size:11px;color:rgba(255,255,255,0.3)">Sites ranked by workability</div>`;
+  ranked.forEach((s,i)=>{
+    const color=s.status==='HOLD'?'#e53935':s.status==='CAUTION'?'#ff9800':'#4caf50';
+    const emoji=s.status==='HOLD'?'🔴':s.status==='CAUTION'?'🟡':'🟢';
+    const border=s.status==='HOLD'?'rgba(229,57,53,0.3)':s.status==='CAUTION'?'rgba(255,152,0,0.3)':'rgba(76,175,80,0.3)';
+    html+=`<div style="margin:8px 16px;background:var(--surface3);border:1px solid ${border};border-radius:var(--radius);padding:14px;display:flex;align-items:center;gap:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0;width:24px;text-align:center">${i+1}</div><div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text)">${s.projectName||s.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.topAlert}</div></div><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:${color};flex-shrink:0">${emoji} ${s.status}</div></div>`;
+  });
+  html+='<div style="padding:12px 16px;font-size:11px;color:rgba(255,255,255,0.25);font-style:italic">Conditions are a guide. You know your sites best.</div>';
+  content.innerHTML=html;
+}
+
+// ── TIER UPGRADE FUNCTIONS ────────────────────────────────
 function toggleTier(id){
   const card=document.getElementById(id);if(!card)return;
-  const body=card.querySelector('.tier-body');
-  const chevron=card.querySelector('.tier-chevron');
+  const body=card.querySelector('.tier-body'),chevron=card.querySelector('.tier-chevron');
   const isOpen=body.classList.contains('open');
   document.querySelectorAll('.tier-body').forEach(b=>b.classList.remove('open'));
   document.querySelectorAll('.tier-chevron').forEach(c=>c.textContent='▼');
@@ -82,16 +269,13 @@ function toggleTier(id){
 
 function startUpgrade(tier){
   closeSettingsSilent();history.back();
-  if(tier==='pro'){
-    if(!localStorage.getItem('jw_upsell_seen')){showCrewUpsell();return;}
-    window.open(STRIPE_PRO,'_blank');return;
-  }
+  if(tier==='pro'){if(!localStorage.getItem('jw_upsell_seen')){showCrewUpsell();return;}window.open(STRIPE_PRO,'_blank');return;}
   if(tier==='crew'){window.open(STRIPE_CREW,'_blank');return;}
   if(tier==='project'){window.open(STRIPE_PROJECT,'_blank');return;}
 }
 
 function showCrewUpsell(){
   localStorage.setItem('jw_upsell_seen','true');
-  document.getElementById('modalInner').innerHTML=`<button class="modal-close" onclick="closeModalBtn()">✕</button><div style="padding:1.5rem 1rem;text-align:center"><div style="font-size:28px;margin-bottom:12px">👷</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px">Before you go...</div><div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">You chose Pro at $4.99/year.<br>For $5 more get <strong style="color:var(--text)">CREW</strong> — share locations, sync notes, and bring your whole team.</div><div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;text-align:left">${['👷 Up to 5 crew members','📍 Shared job site locations','📝 Notes synced across devices','🌅 Morning briefing for the whole crew'].map(f=>'<div style="font-size:12px;color:var(--muted);padding:3px 0">✓ '+f+'</div>').join('')}</div><a href="${STRIPE_CREW}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:0.06em;padding:14px;border-radius:var(--radius);text-decoration:none;text-align:center;margin-bottom:10px">YES — UPGRADE TO CREW · $9.99/YEAR →</a><button onclick="window.open('${STRIPE_PRO}','_blank');closeModalBtn();" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px">No thanks, just Pro for $4.99</button></div>`;
+  document.getElementById('modalInner').innerHTML=`<button class="modal-close" onclick="closeModalBtn()">✕</button><div style="padding:1.5rem 1rem;text-align:center"><div style="font-size:28px;margin-bottom:12px">👷</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px">Before you go...</div><div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">You chose Pro at $4.99/year.<br>For $5 more get <strong style="color:var(--text)">CREW</strong> — share locations, sync notes, bring your whole team.</div><div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;text-align:left">${['👷 Up to 5 crew members','📍 Shared locations','📝 Synced notes','🌅 Crew morning briefing'].map(f=>'<div style="font-size:12px;color:var(--muted);padding:3px 0">✓ '+f+'</div>').join('')}</div><a href="${STRIPE_CREW}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:0.06em;padding:14px;border-radius:var(--radius);text-decoration:none;text-align:center;margin-bottom:10px">YES — UPGRADE TO CREW · $9.99/YEAR →</a><button onclick="window.open('${STRIPE_PRO}','_blank');closeModalBtn();" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px">No thanks, just Pro for $4.99</button></div>`;
   navPush('modal');document.getElementById('dayModal').classList.add('open');
 }

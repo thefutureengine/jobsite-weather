@@ -42,9 +42,8 @@
       <button class="btn" onclick="doSearch()">Go</button>
       <button class="btn btn-ghost" onclick="useGPS()">📍 GPS</button>
     </div>
-    <div class="trade-row">
-      <label>Trade:</label>
-      <select id="tradeSelect" onchange="onTradeChange()">
+    <div style="display:flex;align-items:center;gap:8px">
+      <select id="tradeSelect" onchange="onTradeChange()" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;-webkit-appearance:none;appearance:none;">
         <option value="general">General / All Trades</option>
         <option value="roofing">Roofing</option>
         <option value="concrete">Concrete / Masonry</option>
@@ -63,6 +62,7 @@
         <option value="solar">Solar Installation</option>
         <option value="demolition">Demolition</option>
       </select>
+      <button id="projectPill" onclick="handleProjectTap()" style="flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.08em;padding:6px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;transform:translateZ(0);backface-visibility:hidden;">📋 PROJECT</button>
     </div>
   </div>
 
@@ -109,6 +109,7 @@
 <!-- TOAST -->
 <div id="toastContainer"></div>
 
+<script src="/js/auth.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/trial.js"></script>
 <script src="/js/weather.js"></script>
