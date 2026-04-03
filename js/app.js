@@ -153,10 +153,9 @@ if(new URLSearchParams(window.location.search).get('pro')==='true'){
   setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();},500);
 }
 
+// Restore all persisted settings
 const savedTrade=localStorage.getItem('jw_trade');
-if(savedTrade){currentTrade=savedTrade;document.getElementById('tradeSelect').value=savedTrade;}
-
-// Clear saved locs only if somehow corrupted
+if(savedTrade){currentTrade=savedTrade;const ts=document.getElementById('tradeSelect');if(ts)ts.value=savedTrade;}
 if(!Array.isArray(savedLocs))savedLocs=[];
 
 renderLocs();
