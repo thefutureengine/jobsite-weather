@@ -253,6 +253,24 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .fade-in{animation:fadeIn 0.3s ease;}
 
+/* ── PROJECT MODE ── */
+.project-bar{background:#0f2235;border-top:1px solid rgba(245,166,35,0.2);border-bottom:1px solid rgba(255,255,255,0.06);padding:6px 16px;display:flex;align-items:center;justify-content:space-between;}
+.project-pill{display:inline-flex;align-items:center;gap:6px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+.project-pill:hover{border-color:var(--accent);color:var(--accent);}
+.project-pill.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.project-pill.locked{opacity:0.5;border-style:dashed;}
+.crew-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--accent);opacity:0.6;}
+.project-drawer{background:var(--surface);border-top:1px solid var(--border);padding:16px;display:none;max-height:60vh;overflow-y:auto;}
+.project-drawer.open{display:block;}
+.project-site-card{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
+.project-site-card:hover{border-color:var(--accent);}
+.psc-status{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.psc-detail{font-size:11px;color:var(--muted);}
+.psc-sub{font-size:10px;color:var(--subtle);margin-top:2px;}
+.tomorrow-alert{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:var(--radius-sm);padding:10px 12px;margin-top:8px;}
+.tomorrow-alert-head{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.06em;margin-bottom:4px;}
+.tomorrow-alert-body{font-size:11px;color:var(--muted);line-height:1.5;}
+
 .storm-banner{margin:0 16px 8px;border-radius:var(--radius-sm);padding:10px 32px 10px 12px;position:relative;font-size:12px;line-height:1.5;}
 .storm-banner.storm-red{background:rgba(229,57,53,0.12);border:1px solid rgba(229,57,53,0.4);color:#ff6b6b;}
 .storm-banner.storm-amber{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);color:var(--accent);}
@@ -324,6 +342,12 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
         <option value="landscaping">Landscaping</option>
         <option value="excavation">Excavation / Grading</option>
         <option value="farming">Farming / Agriculture</option>
+        <option value="gc">General Contractor</option>
+        <option value="architect">Architect / Designer</option>
+        <option value="inspector">Inspector</option>
+        <option value="surveyor">Surveyor</option>
+        <option value="solar">Solar Installation</option>
+        <option value="demolition">Demolition</option>
       </select>
     </div>
   </div>
@@ -338,6 +362,12 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
     <button class="nav-tab" onclick="switchTab('forecast')" id="tab-forecast">FORECAST</button>
     <button class="nav-tab" onclick="switchTab('foreman')" id="tab-foreman">🔨 FOREMAN</button>
   </div>
+
+  <div class="project-bar" id="projectBar" style="display:none">
+    <div class="project-pill" id="projectPill" onclick="toggleProjectMode()">📋 PROJECT MODE</div>
+    <span class="crew-label" id="crewLabel"></span>
+  </div>
+  <div class="project-drawer" id="projectDrawer"></div>
 
   <div id="content"><div class="loading">Locating you</div></div>
 
@@ -378,6 +408,9 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 let sb=null;
 try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);console.log('[Supabase] Client initialized');}catch(e){console.warn('[Supabase] Init failed, running without:',e.message);}
 
+// DEV ONLY — REMOVE BEFORE MERGE
+localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');
+
 // ── CONSTANTS ──────────────────────────────────────────────
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Severe storm'};
 const ICO={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
@@ -396,7 +429,13 @@ const TRADE_CONFIG={
   painting:{name:'Painting',rainDanger:0.01,tempLow:50,tempHigh:95,windCaution:20},
   landscaping:{name:'Landscaping',windDanger:40,windCaution:25},
   excavation:{name:'Excavation',rainNote:true},
-  farming:{name:'Farming',tempFreeze:28,windDanger:50,windCaution:30}
+  farming:{name:'Farming',tempFreeze:28,windDanger:50,windCaution:30},
+  gc:{name:'General Contractor',windDanger:35,windCaution:20},
+  architect:{name:'Architect / Designer',windDanger:30,windCaution:20},
+  inspector:{name:'Inspector',windDanger:30,windCaution:20},
+  surveyor:{name:'Surveyor',windDanger:25,windCaution:15},
+  solar:{name:'Solar Installation',windDanger:25,windCaution:15,rainStop:true},
+  demolition:{name:'Demolition',windDanger:20,windCaution:15}
 };
 
 const TOMORROW_KEY='0jFpfjBpo5Zhm5duaeZEwT14339iXIcE';
@@ -563,6 +602,28 @@ function getTradeAlerts(temp,windMph,precip,wmo,rh){
     if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — equipment stability risk. Park it and wait it out.`});
     else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — hold off on spraying. You'll just be chasing drift all day.`});
     if(isRain||precip>0.1) alerts.push({level:'caution',msg:`Field's soft. Run heavy equipment now and you'll regret it for weeks.`});
+  } else if(currentTrade==='gc'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — coordinate all trade crews. High wind across the site.`});
+    if(isRain||precip>0.3) alerts.push({level:'danger',msg:`Rain affecting multiple trades on site. Adjust schedules.`});
+    if(temp<32) alerts.push({level:'danger',msg:`${temp}°F — freezing. Concrete and masonry holds, check all trades.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — check crane and lift operations.`});
+  } else if(currentTrade==='architect'){
+    if(isRain||precip>0.5) alerts.push({level:'caution',msg:`Rain likely — site visit conditions poor.`});
+    if(windMph>=30) alerts.push({level:'caution',msg:`${windMph} mph — outdoor inspection difficult.`});
+    if(temp<20) alerts.push({level:'danger',msg:`${temp}°F — extreme cold. Limit site exposure time.`});
+  } else if(currentTrade==='inspector'){
+    if(isRain||precip>0.4) alerts.push({level:'caution',msg:`Rain — exterior inspection conditions poor.`});
+    if(temp<10) alerts.push({level:'danger',msg:`${temp}°F — extreme cold. Limit outdoor exposure.`});
+  } else if(currentTrade==='surveyor'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — wind affecting instrument accuracy.`});
+    if(isRain||precip>0.3) alerts.push({level:'danger',msg:`Rain — equipment and visibility issues.`});
+  } else if(currentTrade==='solar'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — wind too high for panel handling.`});
+    if(isRain) alerts.push({level:'danger',msg:`Wet roof — no installation today.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — use caution with large panels.`});
+  } else if(currentTrade==='demolition'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — debris control required. Wind is a hazard.`});
+    if(isRain||precip>0.3) alerts.push({level:'caution',msg:`Rain — dust suppression active, mud hazard on site.`});
   } else {
     // General
     if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — secure everything that can move and get off elevated work.`});
@@ -590,6 +651,12 @@ function getWorkabilityAllClear(){
     excavation:'Ground should be stable. Dig away.',
     landscaping:'Good day to make it look like you planned it this way.',
     farming:'Field conditions look favorable. Make hay while the sun shines — literally.',
+    gc:'All trades clear. Good day to run the site.',
+    architect:'Clear conditions. Good day for site visits.',
+    inspector:'Inspection conditions favorable. Get it done.',
+    surveyor:'Calm and clear. Instruments will be accurate.',
+    solar:'Low wind, dry roof. Install day.',
+    demolition:'Clear conditions. Knock it down.',
     general:'No issues flagged. Go make some money.'
   };
   return msgs[currentTrade]||msgs.general;
@@ -1274,8 +1341,8 @@ function openSettings(){
   const style=localStorage.getItem('jw_foreman_style')||'shooter';
   const trade=currentTrade;
   const s=getTrialState();
-  const tradeOpts=['general','roofing','concrete','electrical','plumbing','hvac','framing','painting','landscaping','excavation','farming'];
-  const tradeLabels=['General / All Trades','Roofing','Concrete / Masonry','Electrical','Plumbing','HVAC','Framing / Carpentry','Painting','Landscaping','Excavation / Grading','Farming / Agriculture'];
+  const tradeOpts=['general','roofing','concrete','electrical','plumbing','hvac','framing','painting','landscaping','excavation','farming','gc','architect','inspector','surveyor','solar','demolition'];
+  const tradeLabels=['General / All Trades','Roofing','Concrete / Masonry','Electrical','Plumbing','HVAC','Framing / Carpentry','Painting','Landscaping','Excavation / Grading','Farming / Agriculture','General Contractor','Architect / Designer','Inspector','Surveyor','Solar Installation','Demolition'];
   const inner=document.getElementById('settingsInner');
   const isFounder=localStorage.getItem('jw_founding_crew')==='true';
   const briefingOn=localStorage.getItem('jw_morning_briefing')!=='false';
@@ -1374,6 +1441,8 @@ function openSettings(){
 
 function saveSettings(){
   const name=(document.getElementById('settingsName')?.value||'').trim()||'Boss';
+  // DEV ONLY — REMOVE BEFORE MERGE
+  if(name.toUpperCase()==='CREWPLAN'){localStorage.setItem('jw_crew','true');showToast('Crew Plan activated 🔨',2000);}
   const style=document.querySelector('input[name=sstyle]:checked')?.value||'shooter';
   const trade=document.getElementById('settingsTrade')?.value||'general';
   localStorage.setItem('jw_user_name',name);
@@ -1581,7 +1650,7 @@ function saveCurrentLoc(){
   if(!isPro()){showPaywall('locations');return;}
   if(!currentLabel)return;
   if(savedLocs.find(l=>l.label===currentLabel))return;
-  if(savedLocs.length>=5){alert('Max 5 saved locations. Remove one first.');return;}
+  if(savedLocs.length>=10){alert('Max 10 saved locations. Remove one first.');return;}
   savedLocs.push({label:currentLabel,lat:currentLat,lon:currentLon});
   localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
   renderLocs();
@@ -1700,6 +1769,134 @@ function completeOnboarding(){
   document.getElementById('onboardOverlay')?.remove();
 }
 
+// ── PROJECT MODE ──────────────────────────────────────────
+let projectModeOpen=false;
+
+function isCrewPlan(){
+  return localStorage.getItem('jw_pro')==='true'&&localStorage.getItem('jw_crew')==='true';
+}
+
+function renderProjectBar(){
+  const bar=document.getElementById('projectBar');
+  const pill=document.getElementById('projectPill');
+  const label=document.getElementById('crewLabel');
+  if(!bar||!pill||!label)return;
+  bar.style.display='flex';
+  if(isCrewPlan()){
+    pill.className='project-pill'+(projectModeOpen?' active':'');
+    pill.innerHTML='📋 PROJECT MODE';
+    label.textContent='CREW PLAN';
+  } else if(isPro()){
+    pill.className='project-pill locked';
+    pill.innerHTML='🔒 PROJECT MODE';
+    label.textContent='CREW PLAN · $19.99/yr';
+  } else {
+    pill.className='project-pill locked';
+    pill.innerHTML='🔒 PROJECT MODE';
+    label.textContent='PRO + CREW';
+  }
+}
+
+function toggleProjectMode(){
+  if(!isCrewPlan()){
+    showToast('Project Mode requires the Crew Plan — $19.99/year',3000);
+    return;
+  }
+  projectModeOpen=!projectModeOpen;
+  document.getElementById('projectPill')?.classList.toggle('active',projectModeOpen);
+  const drawer=document.getElementById('projectDrawer');
+  if(drawer)drawer.classList.toggle('open',projectModeOpen);
+  if(projectModeOpen)loadProjectDrawer();
+}
+
+async function loadProjectDrawer(){
+  const drawer=document.getElementById('projectDrawer');
+  if(!drawer||!savedLocs.length){
+    if(drawer)drawer.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Save job sites from the conditions screen to see them here.<br><span style="font-size:11px;color:var(--subtle);margin-top:4px;display:block">Up to 10 locations</span></div>`;
+    return;
+  }
+  drawer.innerHTML='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">YOUR JOB SITES TODAY</div><div id="projectSiteCards"><div style="text-align:center;padding:12px;color:var(--muted);font-size:12px">Loading sites...</div></div><div id="tomorrowAlerts"></div>';
+  // Fetch conditions for all saved sites in parallel
+  const results=await Promise.allSettled(savedLocs.map(async(loc)=>{
+    const data=await fetchWx(loc.lat,loc.lon);
+    const c=data.current;
+    const temp=Math.round(c.temperature_2m);
+    const wind=kmh2mph(Math.round(c.wind_speed_10m));
+    const wmo=c.weather_code;
+    const precip=c.precipitation||0;
+    const rh=Math.round(c.relative_humidity_2m);
+    const savedTrd=currentTrade;
+    const alerts=getTradeAlerts(temp,wind,precip,wmo,rh);
+    const status=alerts.length===0?'safe':alerts.some(a=>a.level==='danger')?'danger':'caution';
+    // Get hourly for tomorrow alerts
+    const hourly=data.hourly?.time?.map((t,i)=>({time:t,prob:data.hourly.precipitation_probability[i]||0}));
+    return{label:loc.label,lat:loc.lat,lon:loc.lon,temp,wind,wmo,status,alerts,project:loc.project||null,trade:loc.trade||null,hourly};
+  }));
+  const sites=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  const statusLabels={safe:'🟢 GO',caution:'🟡 CAUTION',danger:'🔴 HOLD'};
+  const statusColors={safe:'var(--safe)',caution:'var(--accent)',danger:'#ff6b6b'};
+  const cards=document.getElementById('projectSiteCards');
+  if(cards)cards.innerHTML=sites.map(s=>`
+    <div class="project-site-card" onclick="loadSiteFromProject('${s.label.replace(/'/g,"\\'")}',${s.lat},${s.lon})">
+      <div class="psc-status" style="color:${statusColors[s.status]}">${statusLabels[s.status]} <span style="color:var(--text);font-weight:600">${s.label}</span></div>
+      <div class="psc-detail">${s.project?s.project+' · ':''}${WMO[s.wmo]||'Unknown'} · ${s.temp}°F · Wind ${s.wind}mph</div>
+      ${s.alerts.length?`<div class="psc-sub">${s.alerts[0].msg}</div>`:''}
+    </div>
+  `).join('')+`<div class="project-site-card" style="text-align:center;color:var(--accent);border-style:dashed" onclick="document.getElementById('locInput').focus()">+ Add job site</div>`;
+  // Tomorrow alerts
+  const tAlerts=getTomorrowAlerts(sites);
+  const tDiv=document.getElementById('tomorrowAlerts');
+  if(tDiv&&tAlerts.length){
+    tDiv.innerHTML=`<div class="tomorrow-alert"><div class="tomorrow-alert-head">⚡ TOMORROW ALERT</div>${tAlerts.map(a=>`<div class="tomorrow-alert-body">${a.site}: ${a.message}</div>`).join('')}</div>`;
+  }
+}
+
+function getTomorrowAlerts(sites){
+  const alerts=[];
+  const tom=new Date();tom.setDate(tom.getDate()+1);
+  sites.forEach(s=>{
+    if(!s.hourly)return;
+    const tomorrowHrs=s.hourly.filter(h=>{const d=new Date(h.time);return d.getDate()===tom.getDate()&&d.getHours()<12;});
+    const bad=tomorrowHrs.filter(h=>h.prob>60);
+    if(bad.length>=3)alerts.push({site:s.label,message:`${Math.round(bad[0].prob)}% rain before noon — plan crew dispatch`});
+  });
+  return alerts;
+}
+
+function loadSiteFromProject(label,lat,lon){
+  projectModeOpen=false;
+  document.getElementById('projectDrawer')?.classList.remove('open');
+  document.getElementById('projectPill')?.classList.remove('active');
+  loadByLatLon(lat,lon,label);
+}
+
+// ── DEVICE ID ─────────────────────────────────────────────
+function getOrCreateDeviceId(){
+  let id=localStorage.getItem('jw_device_id');
+  if(!id){id=crypto.randomUUID();localStorage.setItem('jw_device_id',id);}
+  return id;
+}
+
+// ── SUPABASE NOTES ────────────────────────────────────────
+async function saveNoteToSupabase(siteLabel,noteText){
+  if(!sb)return false;
+  const userKey=localStorage.getItem('jw_restore_email')||getOrCreateDeviceId();
+  try{
+    const{error}=await sb.from('jw_notes').insert({user_key:userKey,site_id:null,note:noteText});
+    return!error;
+  }catch(e){return false;}
+}
+
+async function loadNotesFromSupabase(){
+  if(!sb)return null;
+  const userKey=localStorage.getItem('jw_restore_email')||getOrCreateDeviceId();
+  try{
+    const{data,error}=await sb.from('jw_notes').select('note,created_at').eq('user_key',userKey).order('created_at',{ascending:false}).limit(20);
+    if(error||!data?.length)return null;
+    return data;
+  }catch(e){return null;}
+}
+
 // ── MORNING BRIEFING ──────────────────────────────────────
 function scheduleMorningBriefing(){
   if(Notification.permission!=='granted')return;
@@ -1741,6 +1938,7 @@ if(!Array.isArray(savedLocs))savedLocs=[];
 
 renderLocs();
 renderFounderBadge();
+renderProjectBar();
 showTrialToast();
 
 // ── SWIPE GESTURES ────────────────────────────────────────
