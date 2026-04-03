@@ -1,0 +1,27 @@
+[functions]
+  directory = "netlify/functions"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type"
+    Access-Control-Allow-Methods = "POST, GET, OPTIONS"
+
+[[redirects]]
+  from = "/api/foreman"
+  to = "/.netlify/functions/foreman"
+  status = 200
+
+[[redirects]]
+  from = "/api/restore-pro"
+  to = "/.netlify/functions/restore-pro"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+
+[build]
+  functions = "netlify/functions"

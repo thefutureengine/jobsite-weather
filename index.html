@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="JobSite Weather"/>
+<meta name="theme-color" content="#0a1520"/>
+<meta name="description" content="Weather built for the trades. Trade-specific conditions, severe weather alerts, and jobsite safety ratings for contractors and field workers."/>
+<meta name="google-site-verification" content="5WURXg5enJ7p6g_ku0-pwN_gqtmtYGCdoPOaWWz9gD4" />
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://jobsiteweather.app/"/>
+<title>JobSite Weather · by StrickerCo</title>
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-32.png"/>
+<link rel="shortcut icon" href="/icons/icon-32.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a1520;--surface:#111f2e;--surface2:#162436;--surface3:#1c2d40;
+  --accent:#f5a623;--accent2:#e8891a;--accent-dim:rgba(245,166,35,0.15);
+  --safe:#4caf50;--safe-dim:rgba(76,175,80,0.15);
+  --caution:#f5a623;--caution-dim:rgba(245,166,35,0.15);
+  --danger:#e53935;--danger-dim:rgba(229,57,53,0.15);
+  --blue:#5bbcff;--blue-dim:rgba(91,188,255,0.15);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.12);
+  --text:#ffffff;--muted:rgba(255,255,255,0.72);--subtle:rgba(255,255,255,0.45);
+  --radius:12px;--radius-sm:8px;
+}
+html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;-webkit-tap-highlight-color:transparent;}
+.app{max-width:430px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom,16px);}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:12px 16px 12px;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.05em;color:#0a1520;-webkit-text-stroke:1.5px var(--accent);paint-order:stroke fill;}
+.logo span{color:var(--accent);-webkit-text-stroke:1.5px #0a1520;paint-order:stroke fill;}
+.byline{font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.notify-btn{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);transition:all 0.2s;}
+.notify-btn:hover,.notify-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.by-label{font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;}
+
+/* ── SEARCH ── */
+.search-wrap{background:var(--surface);padding:10px 16px;border-bottom:1px solid var(--border);}
+.search-row{display:flex;gap:6px;margin-bottom:8px;}
+.search-row input{
+  flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:9px 12px;font-size:14px;color:var(--text);font-family:'Barlow',sans-serif;
+  outline:none;min-width:0;transition:border-color 0.2s;
+}
+.search-row input::placeholder{color:var(--muted);}
+.search-row input:focus{border-color:var(--accent);}
+.btn{
+  background:var(--accent);border:none;border-radius:var(--radius-sm);
+  padding:9px 14px;font-size:13px;font-weight:700;color:#0a1520;cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em;white-space:nowrap;
+  transition:background 0.15s;
+}
+.btn:hover{background:var(--accent2);}
+.btn:active{transform:scale(0.97);}
+.btn-ghost{background:var(--surface3);color:var(--text);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface2);border-color:var(--border2);}
+
+/* ── TRADE ROW ── */
+.trade-row{display:flex;align-items:center;gap:8px;}
+.trade-row label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap;}
+.trade-row select{
+  flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:7px 10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;
+  outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(240,244,248,0.4)'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+.trade-row select option{background:#111f2e;color:#f0f4f8;}
+
+/* ── SAVED LOCS ── */
+.locs-row{display:flex;gap:6px;padding:8px 16px;background:var(--surface);border-top:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+.locs-row::-webkit-scrollbar{display:none;}
+.loc-chip{flex-shrink:0;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all 0.15s;}
+.loc-chip:hover{border-color:var(--border2);}
+.loc-chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.loc-chip.locked{opacity:0.45;cursor:pointer;border-style:dashed;}
+.loc-chip .remove{font-size:14px;line-height:1;opacity:0.6;}
+.loc-chip .remove:hover{color:#ff6b6b;opacity:1;}
+.add-chip{color:var(--accent);border-color:rgba(245,166,35,0.3);}
+.add-chip.pro-locked{color:var(--muted);border-color:var(--border);border-style:dashed;}
+
+/* ── ALERTS ── */
+.alert{margin:10px 16px;border-radius:var(--radius);padding:11px 14px;display:none;}
+.alert.danger{background:rgba(229,57,53,0.15);border:1px solid rgba(229,57,53,0.4);}
+.alert.warning{background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.35);}
+.alert-head{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.04em;margin-bottom:3px;}
+.alert.danger .alert-head{color:#ff6b6b;}
+.alert.warning .alert-head{color:var(--accent);}
+.alert-body{font-size:12px;color:var(--muted);line-height:1.5;}
+.nws-alert{border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;position:relative;transition:transform 0.2s,opacity 0.2s;touch-action:pan-y;}
+.nws-alert.swiping{transition:none;}
+.nws-alert.dismissed{transform:translateX(100%);opacity:0;pointer-events:none;}
+.nws-severe{background:rgba(229,57,53,0.12);border:1px solid rgba(229,57,53,0.4);}
+.nws-moderate{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);}
+.nws-event{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.03em;margin-bottom:2px;padding-right:24px;}
+.nws-severe .nws-event{color:#ff6b6b;}
+.nws-moderate .nws-event{color:var(--accent);}
+.nws-headline{font-size:11px;color:var(--muted);line-height:1.5;}
+.nws-exp{font-size:10px;color:var(--subtle);margin-top:3px;}
+.nws-dismiss{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--subtle);font-size:16px;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;line-height:1;padding:0;}
+.nws-dismiss:hover{color:var(--muted);background:rgba(255,255,255,0.08);}
+
+/* ── HERO ── */
+.hero{
+  padding:20px 16px 16px;
+  background:linear-gradient(160deg,var(--surface) 0%,var(--bg) 70%);
+  border-bottom:1px solid var(--border);
+}
+.trade-badge{display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em;text-transform:uppercase;}
+.city{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;}
+.hero-main{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px;}
+.temp-display{font-family:'Barlow Condensed',sans-serif;font-size:84px;font-weight:800;line-height:1;color:#ffffff;letter-spacing:-0.02em;-webkit-text-stroke:1px rgba(0,0,0,0.6);paint-order:stroke fill;}
+.temp-unit{font-size:36px;font-weight:400;color:rgba(255,255,255,0.85);}
+.wx-icon{font-size:60px;line-height:1;filter:drop-shadow(0 0 20px rgba(245,166,35,0.2));}
+.condition-row{font-size:15px;color:var(--muted);margin-bottom:2px;}
+.feels{font-size:12px;color:var(--subtle);}
+.sun-strip{display:flex;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.sun-item{display:flex;align-items:center;gap:6px;font-size:12px;}
+.sun-label{color:var(--muted);}
+.sun-val{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#ffffff;-webkit-text-stroke:0.4px rgba(0,0,0,0.4);paint-order:stroke fill;}
+.sun-ico{font-size:14px;}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:10px 16px 6px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;transition:border-color 0.2s;}
+.stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#ffffff;line-height:1.1;-webkit-text-stroke:0.5px rgba(0,0,0,0.5);paint-order:stroke fill;}
+.stat-sub{font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px;}
+.wind-box{cursor:pointer;}
+.wind-dir{display:inline-flex;align-items:center;gap:4px;}
+.wind-arrow{display:inline-block;font-size:14px;line-height:1;transition:transform 0.5s;}
+
+/* ── SECTIONS ── */
+.section{padding:0 16px;margin-bottom:10px;}
+.sec-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.field-item{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:var(--radius);padding:11px 13px;display:flex;align-items:center;gap:10px;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dot-safe{background:var(--safe);box-shadow:0 0 8px rgba(76,175,80,0.6);}
+.dot-caution{background:var(--caution);box-shadow:0 0 8px rgba(245,166,35,0.6);}
+.dot-danger{background:var(--danger);box-shadow:0 0 8px rgba(229,57,53,0.6);}
+.fi-lbl{font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:3px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;}
+.fi-val{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:#ffffff;text-shadow:0 1px 4px rgba(0,0,0,0.8),0 0 8px rgba(0,0,0,0.6);letter-spacing:0.02em;}
+
+/* ── HOURLY ── */
+.hourly-section{display:flex;align-items:center;gap:4px;}
+.hourly-wrap{overflow-x:auto;padding-bottom:4px;scrollbar-width:none;scroll-behavior:smooth;flex:1;min-width:0;}
+.hourly-wrap::-webkit-scrollbar{display:none;}
+.hourly-inner{display:flex;gap:6px;min-width:max-content;}
+.hourly-arrow{display:none;background:var(--surface);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;color:var(--muted);font-size:14px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:color 0.15s,border-color 0.15s;}
+.hourly-arrow:hover{color:var(--accent);border-color:var(--accent);}
+@media(hover:hover){.hourly-arrow{display:flex;}}
+.hr-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 11px;text-align:center;min-width:64px;transition:border-color 0.2s;}
+.hr-item.alert-hr{border-color:rgba(245,166,35,0.5);background:rgba(245,166,35,0.07);}
+.hr-item.danger-hr{border-color:rgba(229,57,53,0.5);background:rgba(229,57,53,0.07);}
+.hr-time{font-size:10px;color:var(--muted);margin-bottom:4px;}
+.hr-ico{font-size:20px;margin-bottom:3px;}
+.hr-tmp{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:#ffffff;-webkit-text-stroke:0.4px rgba(0,0,0,0.4);paint-order:stroke fill;}
+.hr-pct{font-size:10px;color:#7dcfff;margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+.hr-wind{font-size:9px;color:rgba(255,255,255,0.7);margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+
+/* ── FORECAST ── */
+.fc-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.fc-row:hover{background:rgba(255,255,255,0.03);border-radius:var(--radius-sm);padding-left:6px;margin:0 -6px;padding-right:6px;}
+.fc-row:last-child{border-bottom:none;}
+.fc-day{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;width:68px;color:var(--text);}
+.fc-ico{font-size:18px;width:26px;text-align:center;}
+.fc-bar-wrap{flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;position:relative;}
+.fc-bar{position:absolute;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--accent));}
+.fc-temps{display:flex;gap:8px;min-width:60px;justify-content:flex-end;}
+.fc-hi{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:#ffffff;-webkit-text-stroke:0.4px rgba(0,0,0,0.4);paint-order:stroke fill;}
+.fc-lo{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:rgba(255,255,255,0.65);}
+.fc-chevron{font-size:14px;color:var(--subtle);margin-left:2px;}
+
+/* ── NAV TABS ── */
+.nav-tabs{display:flex;gap:2px;padding:8px 16px 0;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:calc(48px + env(safe-area-inset-top,0px));z-index:40;}
+.nav-tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;padding:8px 4px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.05em;color:var(--muted);cursor:pointer;transition:all 0.15s;text-align:center;}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:430px;
+  padding:1.25rem 1rem calc(1.5rem + env(safe-area-inset-bottom,0px));
+  max-height:88vh;overflow-y:auto;
+}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 1rem;}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;margin-bottom:3px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:1.25rem;}
+.modal-close{float:right;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;}
+.modal-close:hover{background:var(--surface3);color:var(--text);}
+.dh-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:1rem;}
+.dh-item{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 5px;text-align:center;}
+.dh-item.alert-hr{border-color:rgba(245,166,35,0.5);background:rgba(245,166,35,0.08);}
+.dh-item.danger-hr{border-color:rgba(229,57,53,0.5);background:rgba(229,57,53,0.08);}
+.dh-time{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.dh-ico{font-size:16px;margin-bottom:2px;}
+.dh-tmp{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;}
+.dh-pct{font-size:10px;color:var(--blue);margin-top:1px;}
+.dh-wind{font-size:9px;color:var(--muted);margin-top:1px;}
+.detail-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px;}
+.modal-stat{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;}
+.modal-stat .stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;}
+.modal-stat .stat-val{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--text);}
+.modal-stat .stat-sub{font-size:10px;color:var(--subtle);margin-top:2px;}
+.assessment-box{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;}
+
+/* ── NOTIFY MODAL ── */
+.notify-modal-content{padding:0 4px;}
+.notify-modal-content h3{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px;}
+.notify-modal-content p{font-size:13px;color:var(--muted);margin-bottom:1rem;line-height:1.6;}
+.notify-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.notify-row:last-child{border-bottom:none;}
+.notify-label{font-size:14px;}
+.notify-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--surface3);border-radius:12px;cursor:pointer;border:1px solid var(--border);transition:0.2s;}
+.toggle input:checked+.toggle-slider{background:var(--accent);border-color:var(--accent);}
+.toggle-slider:before{content:"";position:absolute;width:18px;height:18px;left:2px;top:2px;background:white;border-radius:50%;transition:0.2s;}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px);}
+
+/* ── STATES ── */
+.loading{text-align:center;padding:4rem 1rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:0.05em;}
+.loading::after{content:"";display:block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:12px auto 0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.error-state{text-align:center;padding:3rem 1rem;color:#ff6b6b;font-size:14px;}
+.footer{text-align:center;padding:1.5rem 1rem 0.5rem;font-size:10px;color:var(--subtle);letter-spacing:0.06em;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeIn 0.3s ease;}
+
+.storm-banner{margin:0 16px 8px;border-radius:var(--radius-sm);padding:10px 32px 10px 12px;position:relative;font-size:12px;line-height:1.5;}
+.storm-banner.storm-red{background:rgba(229,57,53,0.12);border:1px solid rgba(229,57,53,0.4);color:#ff6b6b;}
+.storm-banner.storm-amber{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);color:var(--accent);}
+.storm-banner .storm-x{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--subtle);font-size:14px;cursor:pointer;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+
+.foreman-chip{display:inline-block;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.foreman-chip:hover{border-color:var(--accent);color:var(--accent);}
+.foreman-input-row{display:flex;gap:6px;margin-top:10px;}
+.foreman-input-row input{flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;}
+.foreman-input-row input:focus{border-color:var(--accent);}
+.foreman-response{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7;}
+.foreman-response .foreman-answer{color:var(--text);}
+.foreman-remaining{font-size:10px;color:var(--subtle);text-align:center;margin-top:8px;letter-spacing:0.04em;}
+
+/* ── SITE NOTES ── */
+.site-note-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin:0 16px 10px;}
+.site-note-card .note-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.site-note-card .note-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:'Barlow Condensed',sans-serif;font-weight:600;}
+.site-note-card .note-actions{display:flex;gap:8px;}
+.site-note-card .note-action{background:none;border:none;font-size:11px;color:var(--subtle);cursor:pointer;padding:2px 4px;}
+.site-note-card .note-action:hover{color:var(--accent);}
+.site-note-card .note-text{font-size:13px;color:var(--muted);line-height:1.5;}
+.site-note-card textarea{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;resize:vertical;min-height:60px;outline:none;}
+.site-note-card textarea:focus{border-color:var(--accent);}
+.site-note-card .note-save-row{display:flex;justify-content:flex-end;gap:6px;margin-top:6px;}
+.add-note-link{display:block;padding:6px 16px 10px;font-size:11px;color:var(--accent);cursor:pointer;letter-spacing:0.04em;font-weight:600;}
+.add-note-link:hover{opacity:0.8;}
+
+/* ── TOAST ── */
+@keyframes toastIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes toastOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(20px);}}
+.jw-toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:500;background:rgba(17,31,46,0.95);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:12px;color:var(--muted);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap;animation:toastIn 0.3s ease;pointer-events:none;max-width:90vw;text-align:center;}
+.jw-toast.out{animation:toastOut 0.3s ease forwards;}
+.jw-toast .toast-accent{color:var(--accent);font-weight:600;}
+</style>
+<link rel="manifest" href="/manifest.json"/>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div>
+      <div class="logo">JOBSITE <span>WEATHER</span></div>
+      <div class="byline">Built for the trades</div>
+    </div>
+    <div class="topbar-right">
+      <button class="notify-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙</button>
+      <div class="by-label">by StrickerCo</div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-row">
+      <input type="text" id="locInput" placeholder="ZIP code or city name" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <button class="btn" onclick="doSearch()">Go</button>
+      <button class="btn btn-ghost" onclick="useGPS()">📍 GPS</button>
+    </div>
+    <div class="trade-row">
+      <label>Trade:</label>
+      <select id="tradeSelect" onchange="onTradeChange()">
+        <option value="general">General / All Trades</option>
+        <option value="roofing">Roofing</option>
+        <option value="concrete">Concrete / Masonry</option>
+        <option value="electrical">Electrical</option>
+        <option value="plumbing">Plumbing</option>
+        <option value="hvac">HVAC</option>
+        <option value="framing">Framing / Carpentry</option>
+        <option value="painting">Painting</option>
+        <option value="landscaping">Landscaping</option>
+        <option value="excavation">Excavation / Grading</option>
+        <option value="farming">Farming / Agriculture</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="locs-row" id="locsRow"></div>
+  <div id="alertBanner" class="alert"></div>
+  <div id="nwsAlerts"></div>
+
+  <!-- NAV TABS -->
+  <div class="nav-tabs" id="navTabs" style="display:none;">
+    <button class="nav-tab active" onclick="switchTab('conditions')" id="tab-conditions">CONDITIONS</button>
+    <button class="nav-tab" onclick="switchTab('forecast')" id="tab-forecast">FORECAST</button>
+    <button class="nav-tab" onclick="switchTab('foreman')" id="tab-foreman">🔨 FOREMAN</button>
+  </div>
+
+  <div id="content"><div class="loading">Locating you</div></div>
+
+  <div class="footer">JOBSITE WEATHER · by StrickerCo · Powered by Open-Meteo</div>
+</div>
+
+<!-- DAY MODAL -->
+<div class="modal-overlay" id="dayModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="modalInner"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal" onclick="closeSettingsOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="settingsInner"></div>
+  </div>
+</div>
+
+<!-- FOREMAN MODAL -->
+<div class="modal-overlay" id="foremanModal" onclick="closeForemanOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="foremanInner"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastContainer"></div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────
+const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Severe storm'};
+const ICO={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const DANGER=new Set([65,75,82,85,86,95,96,99]);
+const WARN=new Set([55,63,71,73,80,81]);
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+const TRADE_CONFIG={
+  general:{name:'General',windDanger:45,windCaution:25},
+  roofing:{name:'Roofing',windDanger:25,windCaution:15,rainStop:true},
+  concrete:{name:'Concrete',rainDanger:0.05,tempLow:40,tempHigh:90},
+  electrical:{name:'Electrical',rainStop:true},
+  plumbing:{name:'Plumbing',tempFreeze:32},
+  hvac:{name:'HVAC',windDanger:40,windCaution:25},
+  framing:{name:'Framing',windDanger:30,windCaution:20},
+  painting:{name:'Painting',rainDanger:0.01,tempLow:50,tempHigh:95,windCaution:20},
+  landscaping:{name:'Landscaping',windDanger:40,windCaution:25},
+  excavation:{name:'Excavation',rainNote:true},
+  farming:{name:'Farming',tempFreeze:28,windDanger:50,windCaution:30}
+};
+
+const TOMORROW_KEY='0jFpfjBpo5Zhm5duaeZEwT14339iXIcE';
+
+// ── STATE ──────────────────────────────────────────────────
+let currentData=null,currentLabel='',currentLat=null,currentLon=null;
+let savedLocs=JSON.parse(localStorage.getItem('jw_locs')||'[]');
+let activeLoc=null,currentTrade='general',nwsAlerts=[];
+let activeTab='conditions';
+let tomorrowHourly=[];
+let notifySettings=JSON.parse(localStorage.getItem('jw_notify')||'{"severe":true,"wind":false,"rain":false}');
+
+// ── PRO / TRIAL ────────────────────────────────────────────
+const STRIPE_LINK='https://buy.stripe.com/14AdR97f0h0E3op09IgUM05';
+const TRIAL_DAYS=30;
+
+function getTrialState(){
+  const paid=localStorage.getItem('jw_pro')==='true';
+  if(paid)return{status:'pro',daysLeft:0};
+  let start=localStorage.getItem('jw_trial_start');
+  if(!start){start=Date.now().toString();localStorage.setItem('jw_trial_start',start);}
+  const elapsed=Math.floor((Date.now()-parseInt(start))/(1000*60*60*24));
+  const daysLeft=Math.max(0,TRIAL_DAYS-elapsed);
+  return{status:daysLeft>0?'trial':'expired',daysLeft};
+}
+
+function isPro(){
+  const s=getTrialState();
+  return s.status==='pro'||s.status==='trial';
+}
+
+function showTrialToast(){
+  const s=getTrialState();
+  if(s.status!=='trial')return;
+  const today=new Date().toDateString();
+  if(localStorage.getItem('jw_toast_shown')===today)return;
+  localStorage.setItem('jw_toast_shown',today);
+  const d=s.daysLeft;
+  let msg='';
+  if(d>=25)msg='Pro trial · Ask the Foreman is yours — 7 questions a day';
+  else if(d>=15)msg=`Pro trial · ${d} days left · Saved locations & job notes included`;
+  else if(d>=7)msg=`Pro trial · ${d} days left · 5AM morning briefing is on`;
+  else if(d>=3)msg=`Pro trial · ${d} days left · You've wasted more than $4.99 on bad weather calls`;
+  else if(d===2)msg='Pro trial ends in 2 days · $4.99 keeps everything';
+  else if(d===1)msg='Last day of trial · $4.99/year · No ads. Ever.';
+  if(!msg)return;
+  showToast(`<span class="toast-accent">⭐ </span>${msg}`,4000);
+}
+
+function showToast(html,duration){
+  const c=document.getElementById('toastContainer');
+  const t=document.createElement('div');
+  t.className='jw-toast';
+  t.innerHTML=html;
+  c.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300);},duration||3000);
+}
+
+function showPaywall(feature){
+  const s=getTrialState();
+  const featureNames={locations:'📍 Saved Locations',foreman:'🔨 Ask the Foreman',notes:'📝 Job Site Notes'};
+  document.getElementById('modalInner').innerHTML=`
+    <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    <div style="text-align:center;padding:1rem 0.5rem 0">
+      <div style="font-size:36px;margin-bottom:8px">${(featureNames[feature]||'🔨').split(' ')[0]}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px">${featureNames[feature]||'Pro Feature'} is a Pro feature</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:1.25rem">
+        You've wasted more than $4.99 waiting on weather that never came.<br>Not anymore.
+      </div>
+      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:1rem;text-align:left">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Pro includes</div>
+        ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved job site locations','📝 Job site notes','🌅 5AM morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text)">${f}</div>`).join('')}
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--accent);margin-bottom:4px">$4.99/year</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:1.25rem">No ads. Ever.</div>
+      ${s.status==='expired'?`
+        <a href="${STRIPE_LINK}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:0.06em;padding:14px;border-radius:var(--radius);text-decoration:none;text-align:center;margin-bottom:10px">UNLOCK PRO →</a>
+      `:`<div style="font-size:13px;color:var(--muted);padding:10px">You have full access during your trial — enjoy it.</div>`}
+      <button onclick="closeModalBtn()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px">Maybe later</button>
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);text-align:left">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Always free</div>
+        ${['Current conditions & trade alerts','7-day forecast','Hourly breakdown','GPS & ZIP search','Wind, UV, sunrise/sunset','No ads. Ever.'].map(f=>`<div style="font-size:12px;color:var(--muted);padding:3px 0">✓ ${f}</div>`).join('')}
+      </div>
+    </div>`;
+  navPush('modal');
+  document.getElementById('dayModal').classList.add('open');
+}
+
+function activatePro(){
+  localStorage.setItem('jw_pro','true');
+  closeModalBtn();
+  document.getElementById('navTabs').style.display='flex';
+  renderLocs();
+  const pName=localStorage.getItem('jw_user_name')||'Boss';
+  showToast(`You're in, ${pName}. Go make some money. 🔨`,3000);
+}
+
+// ── UTILS ──────────────────────────────────────────────────
+const kmh2mph=k=>Math.round(k*0.621371);
+const heatIdx=(t,rh)=>{if(t<80)return t;return Math.round(-42.379+2.04901523*t+10.14333127*rh-0.22475541*t*rh-0.00683783*t*t-0.05481717*rh*rh+0.00122874*t*t*rh+0.00085282*t*rh*rh-0.00000199*t*t*rh*rh);};
+const dotClass=d=>d==='safe'?'dot-safe':d==='caution'?'dot-caution':'dot-danger';
+const fmtTime=iso=>new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
+
+function windDirLabel(deg){
+  if(deg==null||isNaN(deg))return'--';
+  const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg/22.5)%16];
+}
+function windArrowStyle(deg){
+  if(deg==null||isNaN(deg))return'';
+  return`style="display:inline-block;transform:rotate(${(deg+180)%360}deg)"`;
+}
+
+// ── TRADE ALERTS ───────────────────────────────────────────
+function getTradeAlerts(temp,windMph,precip,wmo,rh){
+  const trade=TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general;
+  const alerts=[];
+  const hi=heatIdx(temp,rh);
+  const isStorm=DANGER.has(wmo);
+  const isRain=WARN.has(wmo)||precip>0.1;
+
+  // Severe storm — all trades
+  if(isStorm) return[{level:'danger',msg:`Sky's throwing a fit. Get off the jobsite, it's not worth it.`}];
+
+  const wd=trade.windDanger||45,wc=trade.windCaution||25;
+
+  if(currentTrade==='roofing'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — the roof isn't going anywhere. You might be.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph gusting up there. Hold your felt and your hat.`});
+    if(isRain) alerts.push({level:'danger',msg:`Wet roof. Gravity wins every time. Call it.`});
+  } else if(currentTrade==='concrete'){
+    if(temp<40) alerts.push({level:'danger',msg:`${temp}°F — concrete cures slower than your Monday morning crew.`});
+    else if(temp<50) alerts.push({level:'caution',msg:`${temp}°F — she'll cure, just not on your schedule. Use cold-weather mix.`});
+    if(temp>90) alerts.push({level:'caution',msg:`${temp}°F and climbing — add water reducer or add regrets.`});
+    if(isRain||precip>0.05) alerts.push({level:'danger',msg:`Rain on fresh concrete. Bold move. Don't.`});
+  } else if(currentTrade==='electrical'){
+    if(isRain) alerts.push({level:'danger',msg:`It's raining. Outdoor electrical and water have a well-documented relationship.`});
+    if(windMph>=wd) alerts.push({level:'caution',msg:`${windMph} mph — secure your conduit runs and anything that can fly.`});
+  } else if(currentTrade==='painting'){
+    if(isRain||precip>0.01) alerts.push({level:'danger',msg:`Any moisture ruins fresh paint. Today's exterior work is tomorrow's sanding project.`});
+    if(temp<50) alerts.push({level:'danger',msg:`${temp}°F — paint won't bond. You'll be back to sand it anyway.`});
+    if(temp>95) alerts.push({level:'caution',msg:`${temp}°F — dries too fast, brush marks guaranteed. Work early or don't work.`});
+    if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — that's not overspray, that's your neighbor's car.`});
+  } else if(currentTrade==='framing'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — walls go up easier than they come down sideways.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — that wall panel is a sail. Tie it off.`});
+    if(isRain) alerts.push({level:'caution',msg:`Wet lumber moves, warps, and swells. Tomorrow's problem is today's decision.`});
+  } else if(currentTrade==='plumbing'){
+    if(temp<32) alerts.push({level:'danger',msg:`${temp}°F — pipes don't care about your schedule.`});
+    else if(temp<40) alerts.push({level:'caution',msg:`${temp}°F and dropping. Keep an eye on exposed runs overnight.`});
+  } else if(currentTrade==='hvac'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — no rooftop unit work today. Come back when it's calm.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph up top. Strap it down before it becomes an insurance claim.`});
+    if(hi>=95) alerts.push({level:'caution',msg:`${hi}°F heat index — you're essentially inside an oven. Hydrate or go home.`});
+  } else if(currentTrade==='excavation'){
+    if(isRain||precip>0.1) alerts.push({level:'caution',msg:`Rain makes ground unstable. Check your trench walls — OSHA definitely will.`});
+    if(windMph>=wd) alerts.push({level:'caution',msg:`${windMph} mph — dust is your whole atmosphere right now.`});
+  } else if(currentTrade==='landscaping'){
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — skip the spraying. You're just donating chemicals to the neighbors.`});
+    if(hi>=100) alerts.push({level:'caution',msg:`${hi}°F heat index — your crew is not a cactus. Get them water and shade.`});
+  } else if(currentTrade==='farming'){
+    if(temp<28) alerts.push({level:'danger',msg:`${temp}°F — hard freeze. Crops and equipment both hate this. Move fast.`});
+    else if(temp<34) alerts.push({level:'caution',msg:`${temp}°F — frost possible overnight. Keep an eye on it.`});
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — equipment stability risk. Park it and wait it out.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — hold off on spraying. You'll just be chasing drift all day.`});
+    if(isRain||precip>0.1) alerts.push({level:'caution',msg:`Field's soft. Run heavy equipment now and you'll regret it for weeks.`});
+  } else {
+    // General
+    if(windMph>=wd) alerts.push({level:'danger',msg:`${windMph} mph — secure everything that can move and get off elevated work.`});
+    else if(windMph>=wc) alerts.push({level:'caution',msg:`${windMph} mph — tie down your materials. Wind doesn't care about your bid sheet.`});
+    if(isRain) alerts.push({level:'caution',msg:`${WMO[wmo]||'Rain'} moving through. Keep an eye on it.`});
+  }
+
+  // Universal heat/cold — applied to all trades
+  if(hi>=105) alerts.push({level:'danger',msg:`Heat index ${hi}°F — mandatory breaks, no exceptions. This is how people die on jobsites.`});
+  else if(hi>=95) alerts.push({level:'caution',msg:`Heat index ${hi}°F — water, shade, rotate your crew. Don't be a hero.`});
+  if(temp<28) alerts.push({level:'danger',msg:`${temp}°F — frostbite is faster than you think. Limit exposure.`});
+
+  return alerts;
+}
+
+function getWorkabilityAllClear(){
+  const msgs={
+    roofing:'Clear skies, calm wind. Good day to be on a roof.',
+    concrete:'Temps and conditions are dialed in. Pour with confidence.',
+    electrical:'Dry and calm. Go make sparks — the intentional kind.',
+    painting:'Low wind, good temp, no rain. Perfect coat weather.',
+    framing:'Conditions look solid. Go make some noise.',
+    plumbing:'No freeze risk, no storms. Good day for pipe.',
+    hvac:'Clean conditions. Rooftop work is a go.',
+    excavation:'Ground should be stable. Dig away.',
+    landscaping:'Good day to make it look like you planned it this way.',
+    farming:'Field conditions look favorable. Make hay while the sun shines — literally.',
+    general:'No issues flagged. Go make some money.'
+  };
+  return msgs[currentTrade]||msgs.general;
+}
+
+function workability(temp,windMph,precip,wmo,rh){
+  const a=getTradeAlerts(temp,windMph,precip,wmo,rh);
+  if(!a.length)return{l:'Good to go',d:'safe'};
+  if(a.some(x=>x.level==='danger'))return{l:'Halt work',d:'danger'};
+  return{l:'Use caution',d:'caution'};
+}
+function windRisk(mph){if(mph<15)return{l:'Calm',d:'safe'};if(mph<30)return{l:'Breezy',d:'safe'};if(mph<45)return{l:'Windy',d:'caution'};return{l:'High winds',d:'danger'};}
+function heatRisk(hi){if(hi>=105)return{l:'Extreme',d:'danger'};if(hi>=95)return{l:'Caution',d:'caution'};return{l:'Normal',d:'safe'};}
+
+// ── API ────────────────────────────────────────────────────
+async function geoSearch(q){
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error('Not found');
+  const us=d.results.filter(x=>x.country_code==='US');
+  return us.length?us[0]:d.results[0];
+}
+
+async function fetchWx(lat,lon){
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation,snowfall&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,precipitation_sum,snowfall_sum&wind_speed_unit=kmh&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7`;
+  console.log('[fetchWx] Fetching:',lat,lon);
+  try{
+    const r=await fetch(u);
+    console.log('[fetchWx] Status:',r.status,r.ok);
+    if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
+    const d=await r.json();
+    console.log('[fetchWx] Success, keys:',Object.keys(d));
+    return d;
+  }catch(e){
+    console.error('[fetchWx] FAILED:',e.name,e.message,e);
+    throw e;
+  }
+}
+
+async function fetchNWSAlerts(lat,lon){
+  try{
+    const r=await fetch(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,{headers:{Accept:'application/geo+json','User-Agent':'JobSiteWeather/1.0 (support@strickercosolutions.com)'}});
+    if(!r.ok)return[];
+    const d=await r.json();
+    return(d.features||[]).map(f=>({event:f.properties.event,severity:f.properties.severity,headline:f.properties.headline,expires:f.properties.expires,urgency:f.properties.urgency}));
+  }catch(e){return[];}
+}
+
+async function fetchTomorrowForecast(lat,lon){
+  try{
+    const r=await fetch(`https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lon}&apikey=${TOMORROW_KEY}`);
+    const d=await r.json();
+    return d.timelines?.hourly||[];
+  }catch(e){return[];}
+}
+
+// ── ALERTS ────────────────────────────────────────────────
+function setAlert(type,title,body){
+  const b=document.getElementById('alertBanner');
+  b.className='alert '+type;b.style.display='block';
+  b.innerHTML=`<div class="alert-head">${title}</div><div class="alert-body">${body}</div>`;
+}
+function clearAlert(){document.getElementById('alertBanner').style.display='none';}
+
+function getDismissedAlerts(){
+  try{return JSON.parse(sessionStorage.getItem('jw_dismissed_alerts')||'[]');}catch(e){return[];}
+}
+function dismissAlert(event){
+  const list=getDismissedAlerts();
+  if(!list.includes(event)){list.push(event);sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}
+}
+
+function renderNWSAlerts(alerts){
+  const wrap=document.getElementById('nwsAlerts');
+  if(!alerts?.length){wrap.innerHTML='';return;}
+  const dismissed=getDismissedAlerts();
+  const visible=alerts.filter(a=>!dismissed.includes(a.event)).slice(0,3);
+  if(!visible.length){wrap.innerHTML='';return;}
+  const SEVERE=new Set(['Tornado Warning','Tornado Watch','Severe Thunderstorm Warning','Severe Thunderstorm Watch','Flash Flood Warning','Flash Flood Watch','Blizzard Warning','Ice Storm Warning','Winter Storm Warning','Extreme Wind Warning','Hurricane Warning','Tropical Storm Warning']);
+  const html=visible.map(a=>{
+    const isSev=SEVERE.has(a.event)||a.severity==='Extreme'||a.urgency==='Immediate';
+    const exp=a.expires?new Date(a.expires).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    const safeEvent=a.event.replace(/'/g,"\\'");
+    return`<div class="nws-alert ${isSev?'nws-severe':'nws-moderate'}" data-event="${a.event.replace(/"/g,'&quot;')}">
+      <button class="nws-dismiss" onclick="dismissNWSAlert(this)" title="Dismiss">×</button>
+      <div class="nws-event">${isSev?'⚠ ':''}${a.event}</div>
+      <div class="nws-headline">${a.headline||''}</div>
+      ${exp?`<div class="nws-exp">Until ${exp}</div>`:''}
+    </div>`;
+  }).join('');
+  wrap.innerHTML=`<div style="padding:0 16px;margin-top:8px">${html}</div>`;
+  // Wire swipe-to-dismiss on each card
+  wrap.querySelectorAll('.nws-alert').forEach(card=>{
+    let sx=0,sy=0;
+    card.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;card.classList.add('swiping');},{passive:true});
+    card.addEventListener('touchmove',e=>{
+      const dx=e.touches[0].clientX-sx;
+      const dy=e.touches[0].clientY-sy;
+      if(Math.abs(dx)>Math.abs(dy)*1.5){card.style.transform=`translateX(${dx}px)`;card.style.opacity=Math.max(0,1-Math.abs(dx)/200);}
+    },{passive:true});
+    card.addEventListener('touchend',e=>{
+      card.classList.remove('swiping');
+      const dx=e.changedTouches[0].clientX-sx;
+      if(Math.abs(dx)>80){
+        card.classList.add('dismissed');
+        const event=card.dataset.event;
+        dismissAlert(event);
+        setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML='';},250);
+      } else {card.style.transform='';card.style.opacity='';}
+    },{passive:true});
+  });
+}
+
+function dismissNWSAlert(btn){
+  const card=btn.closest('.nws-alert');
+  if(!card)return;
+  card.classList.add('dismissed');
+  dismissAlert(card.dataset.event);
+  const wrap=document.getElementById('nwsAlerts');
+  setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML='';},250);
+}
+
+function renderAlerts(temp,windMph,precip,wmo,rh,hourly){
+  const tradeAlerts=getTradeAlerts(temp,windMph,precip,wmo,rh);
+  if(tradeAlerts.length){
+    const top=tradeAlerts[0];
+    setAlert(top.level==='danger'?'danger':'warning',top.level==='danger'?'⚠ Heads Up':'⚠ Take Note',tradeAlerts.map(a=>a.msg).join(' · '));
+    checkPushAlerts(tradeAlerts,nwsAlerts);
+    return;
+  }
+  const future=hourly.filter(h=>h.t>new Date()).slice(0,5);
+  const idx=future.findIndex(h=>DANGER.has(h.wmo));
+  if(idx>=0){
+    const hrs=idx+1;
+    setAlert('warning',`Storm rolling in — ${hrs} hr${hrs>1?'s':''} out`,`${WMO[future[idx].wmo]||'Severe weather'} on the way. Plan to wrap up or button it down.`);
+    return;
+  }
+  clearAlert();
+}
+
+// ── NAVIGATION STACK (History API) ─────────────────────────
+function navPush(screen){
+  history.pushState({jw:screen},'');
+}
+
+window.addEventListener('popstate',()=>{
+  // Check what's currently open (highest priority first) and close it
+  if(document.getElementById('foremanModal').classList.contains('open')){
+    closeForemanSilent();
+  } else if(document.getElementById('dayModal').classList.contains('open')){
+    document.getElementById('dayModal').classList.remove('open');
+  } else if(document.getElementById('settingsModal').classList.contains('open')){
+    closeSettingsSilent();
+  } else if(activeTab!=='conditions'){
+    activeTab='conditions';
+    ['conditions','forecast','foreman'].forEach(t=>{
+      document.getElementById('tab-'+t)?.classList.toggle('active',t==='conditions');
+    });
+    renderCurrentTab();
+  }
+});
+
+// ── TABS ──────────────────────────────────────────────────
+function switchTab(tab){
+  if(tab!=='conditions'&&activeTab==='conditions')navPush('tab');
+  activeTab=tab;
+  ['conditions','forecast','foreman'].forEach(t=>{
+    document.getElementById('tab-'+t)?.classList.toggle('active',t===tab);
+  });
+  renderCurrentTab();
+}
+
+function renderCurrentTab(){
+  if(!currentData)return;
+  const el=document.getElementById('content');
+  if(activeTab==='conditions')renderConditions(el);
+  else if(activeTab==='forecast')renderForecast(el);
+  else if(activeTab==='foreman')renderForemanTab(el);
+}
+
+// ── RENDER CONDITIONS ─────────────────────────────────────
+function renderConditions(el){
+  const c=currentData.current;
+  const temp=Math.round(c.temperature_2m);
+  const feels=Math.round(c.apparent_temperature);
+  const rh=Math.round(c.relative_humidity_2m);
+  const windMph=kmh2mph(Math.round(c.wind_speed_10m));
+  const gustMph=kmh2mph(Math.round(c.wind_gusts_10m));
+  const windDeg=Math.round(c.wind_direction_10m||0);
+  const wmo=c.weather_code;
+  const hi=heatIdx(temp,rh);
+  const precip=c.precipitation||0;
+  const uv=Math.round(c.uv_index||0);
+  const uvLabel=uv<=2?'Low':uv<=5?'Moderate':uv<=7?'High':uv<=10?'Very High':'Extreme';
+  const wk=workability(temp,windMph,precip,wmo,rh);
+  const wr=windRisk(windMph);
+  const hr2=heatRisk(hi);
+  const rainPct=currentData.daily.precipitation_probability_max[0]||0;
+  const rainSt=rainPct>60?{l:`${rainPct}% rain`,d:'danger'}:rainPct>30?{l:`${rainPct}% rain`,d:'caution'}:{l:`${rainPct}% rain`,d:'safe'};
+  const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
+  const sunrise=currentData.daily.sunrise?.[0]?fmtTime(currentData.daily.sunrise[0]):'--';
+  const sunset=currentData.daily.sunset?.[0]?fmtTime(currentData.daily.sunset[0]):'--';
+  const dirLabel=windDirLabel(windDeg);
+
+  const now2=new Date();
+  const hourly=currentData.hourly.time.map((t,i)=>({
+    t:new Date(t),temp:Math.round(currentData.hourly.temperature_2m[i]),
+    prob:currentData.hourly.precipitation_probability[i]||0,
+    wmo:currentData.hourly.weather_code[i],
+    wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i])),
+    rh:Math.round(currentData.hourly.relative_humidity_2m[i]||rh),
+    precip:currentData.hourly.precipitation?.[i]||0,
+    snow:currentData.hourly.snowfall?.[i]||0
+  })).filter(h=>h.t>=now2).slice(0,10);
+
+  renderAlerts(temp,windMph,precip,wmo,rh,hourly);
+
+  // Compute workability status for each hour using Open-Meteo data
+  const hrStatuses=hourly.map(h=>{
+    const a=getTradeAlerts(h.temp,h.wind,h.precip,h.wmo,h.rh);
+    return a.length===0?'safe':a.some(x=>x.level==='danger')?'danger':'caution';
+  });
+
+  const hrHTML=hourly.map((h,i)=>{
+    const isDanger=DANGER.has(h.wmo),isWarn=WARN.has(h.wmo);
+    const cls=isDanger?'danger-hr':isWarn?'alert-hr':'';
+    const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
+    const precipLine=h.snow>0.01?`<div class="hr-pct" style="color:#a8d8ff">${h.snow.toFixed(2)}"❄️</div>`:h.precip>0.01?`<div class="hr-pct">${h.precip.toFixed(2)}"</div>`:h.prob>15?`<div class="hr-pct">${h.prob}%</div>`:'<div class="hr-pct" style="opacity:0">·</div>';
+    const statusDot=`<div class="dot ${dotClass(hrStatuses[i])}" style="margin:0 auto 4px"></div>`;
+    return`<div class="hr-item ${cls}">${statusDot}<div class="hr-time">${fmt}</div><div class="hr-ico">${ICO[h.wmo]||'☁️'}</div><div class="hr-tmp">${h.temp}°</div>${precipLine}<div class="hr-wind">${h.wind}mph</div></div>`;
+  }).join('');
+
+  // Workability summary line
+  const firstBad=hrStatuses.findIndex(s=>s==='danger');
+  const firstGood=hrStatuses.findIndex(s=>s==='safe');
+  const allGood=hrStatuses.every(s=>s==='safe');
+  const allBad=hrStatuses.every(s=>s==='danger');
+  const userName=localStorage.getItem('jw_user_name')||'Boss';
+  let wwSummary='';
+  const goodLines=[
+    `Clean day ahead, ${userName}. Go make some money.`,
+    `No excuses today, ${userName}. The way you do one thing is the way you do everything.`,
+    `${userName} — clear all day. Set the standard.`,
+    `Conditions are dialed in, ${userName}. No one's coming to save the bid — go get it.`
+  ];
+  if(allGood)wwSummary=goodLines[new Date().getDate()%goodLines.length];
+  else if(allBad)wwSummary=`Not today, ${userName}. Button it up and live to fight another day.`;
+  else if(firstBad===0&&firstGood>0){
+    const t=hourly[firstGood].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
+    wwSummary=`Rough start, ${userName}. Window opens around ${t}. Be ready.`;
+  } else if(firstBad>0){
+    const t=hourly[firstBad].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
+    wwSummary=`Good window now, ${userName}. Conditions turn around ${t} — plan your move.`;
+  } else wwSummary=`Mixed day, ${userName}. Adapt and get after it.`;
+
+  el.innerHTML=`<div class="fade-in">
+    <div class="hero">
+      <div class="trade-badge">⚙ ${tradeName} conditions</div>
+      <div class="city">${currentLabel}</div>
+      <div class="hero-main">
+        <div><span class="temp-display">${temp}</span><span class="temp-unit">°F</span></div>
+        <div class="wx-icon">${ICO[wmo]||'☁️'}</div>
+      </div>
+      <div class="condition-row">${WMO[wmo]||'Unknown'}</div>
+      <div class="feels">Feels like ${feels}°F &nbsp;·&nbsp; ${rh}% humidity</div>
+      <div class="sun-strip">
+        <div class="sun-item"><span class="sun-ico">🌅</span><span class="sun-label">Sunrise</span><span class="sun-val">${sunrise}</span></div>
+        <div class="sun-item"><span class="sun-ico">🌇</span><span class="sun-label">Sunset</span><span class="sun-val">${sunset}</span></div>
+        <div class="sun-item" style="margin-left:auto"><span class="sun-ico">💧</span><span class="sun-label">Humidity</span><span class="sun-val">${rh}%</span></div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box wind-box" onclick="showWindDetail()">
+        <div class="stat-lbl">Wind</div>
+        <div class="stat-val">${windMph} <span style="font-size:14px;color:var(--muted)">mph</span></div>
+        <div class="stat-sub wind-dir"><span ${windArrowStyle(windDeg)}>↑</span> ${dirLabel} · gusts ${gustMph}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-lbl">UV Index</div>
+        <div class="stat-val">${uv}</div>
+        <div class="stat-sub">${uvLabel}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-lbl">Rain today</div>
+        <div class="stat-val">${rainPct}<span style="font-size:14px;color:var(--muted)">%</span></div>
+        <div class="stat-sub">chance</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-label">Field conditions · ${tradeName}</div>
+      <div class="field-grid">
+        <div class="field-item"><div class="dot ${dotClass(wk.d)}"></div><div><div class="fi-lbl">Workability</div><div class="fi-val">${wk.d==='safe'?getWorkabilityAllClear():wk.l}</div></div></div>
+        <div class="field-item"><div class="dot ${dotClass(wr.d)}"></div><div><div class="fi-lbl">Wind risk</div><div class="fi-val">${wr.l}</div></div></div>
+        <div class="field-item"><div class="dot ${dotClass(hr2.d)}"></div><div><div class="fi-lbl">Heat index</div><div class="fi-val">${hi}°F</div></div></div>
+        <div class="field-item"><div class="dot ${dotClass(rainSt.d)}"></div><div><div class="fi-lbl">Precip</div><div class="fi-val">${rainSt.l}</div></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-label">Next 10 hours</div>
+      <div class="hourly-section">
+        <button class="hourly-arrow left" id="hourlyLeft">‹</button>
+        <div class="hourly-wrap" id="hourlyScroll"><div class="hourly-inner">${hrHTML}</div></div>
+        <button class="hourly-arrow right" id="hourlyRight">›</button>
+      </div>
+      ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">${wwSummary}</div>`:''}
+    </div>
+  </div>`;
+
+  // Site notes — show for current location (match saved loc or use currentLabel)
+  const noteLocLabel=getNoteLocLabel();
+  if(noteLocLabel&&isPro()){
+    const notes=JSON.parse(localStorage.getItem('jw_notes')||'{}');
+    const note=notes[noteLocLabel]||'';
+    if(note){
+      el.innerHTML+=`<div class="site-note-card" id="siteNoteCard">
+        <div class="note-header"><span class="note-label">📋 Job Site Note</span><div class="note-actions"><button class="note-action" onclick="editSiteNote()">Edit</button><button class="note-action" onclick="deleteSiteNote()">Delete</button></div></div>
+        <div class="note-text">${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      </div>`;
+    } else {
+      el.innerHTML+=`<div class="add-note-link" onclick="editSiteNote()">✏️ Add a job site note for ${noteLocLabel}</div>`;
+    }
+  } else if(!isPro()){
+    el.innerHTML+=`<div class="add-note-link" onclick="showPaywall('notes')">🔒 Job Site Notes · Pro</div>`;
+  }
+
+  // Wire hourly scroll arrows
+  const hLeft=document.getElementById('hourlyLeft');
+  const hRight=document.getElementById('hourlyRight');
+  const hScroll=document.getElementById('hourlyScroll');
+  if(hLeft&&hRight&&hScroll){
+    hLeft.addEventListener('click',()=>{hScroll.scrollBy({left:-220,behavior:'smooth'});});
+    hRight.addEventListener('click',()=>{hScroll.scrollBy({left:220,behavior:'smooth'});});
+  }
+}
+
+// ── STORM BANNER ──────────────────────────────────────────
+function renderStormBanner(){
+  const existing=document.getElementById('stormBanner');
+  if(existing)existing.remove();
+  if(!tomorrowHourly.length)return;
+  if(sessionStorage.getItem('jw_storm_dismissed'))return;
+  const now=new Date();
+  let firstRainIdx=-1;
+  for(let i=0;i<Math.min(tomorrowHourly.length,6);i++){
+    const v=tomorrowHourly[i].values;
+    if(v&&v.precipitationIntensity>0.1){firstRainIdx=i;break;}
+  }
+  if(firstRainIdx<0)return;
+  const hours=firstRainIdx+1;
+  let cls,msg;
+  if(hours<=1){cls='storm-red';msg='⚠ Rain arriving soon — wrap up what you can';}
+  else if(hours<=3){cls='storm-amber';msg=`⚠ Rain ~${hours} hrs out — plan your window`;}
+  else{cls='storm-amber';msg='Rain possible this afternoon — keep an eye on it';}
+  const hero=document.querySelector('.hero');
+  if(!hero)return;
+  const div=document.createElement('div');
+  div.id='stormBanner';div.className=`storm-banner ${cls}`;
+  div.innerHTML=`${msg}<button class="storm-x" onclick="this.parentElement.remove();sessionStorage.setItem('jw_storm_dismissed','1')">×</button>`;
+  hero.after(div);
+}
+
+// ── RENDER FORECAST ───────────────────────────────────────
+function renderForecast(el){
+  const daily=currentData.daily;
+  const allT=[...daily.temperature_2m_max,...daily.temperature_2m_min];
+  const tMin=Math.min(...allT),tMax=Math.max(...allT);
+
+  const rows=daily.time.slice(0,7).map((t,i)=>{
+    const d=new Date(t+'T12:00:00');
+    const lbl=i===0?'Today':i===1?'Tmrw':DAYS[d.getDay()];
+    const hi=Math.round(daily.temperature_2m_max[i]),lo=Math.round(daily.temperature_2m_min[i]);
+    const bl=Math.max(0,Math.round((lo-tMin)/(tMax-tMin)*100));
+    const bw=Math.max(10,Math.round((hi-lo)/(tMax-tMin)*100));
+    const rain=daily.precipitation_sum?.[i]||0;
+    const snow=daily.snowfall_sum?.[i]||0;
+    const windMax=kmh2mph(Math.round(daily.wind_speed_10m_max?.[i]||0));
+    const windDomDir=windDirLabel(daily.wind_direction_10m_dominant?.[i]);
+    const precipTag=snow>0.1?`<span style="font-size:10px;color:#a8d8ff">${snow.toFixed(1)}"❄️</span>`:rain>0.1?`<span style="font-size:10px;color:var(--blue)">${rain.toFixed(2)}"</span>`:'';
+    return`<div class="fc-row" onclick="openDayModal(${i})" data-day="${i}">
+      <div class="fc-day">${lbl}</div>
+      <div class="fc-ico">${ICO[daily.weather_code[i]]||'☁️'}</div>
+      <div class="fc-bar-wrap"><div class="fc-bar" style="left:${bl}%;width:${bw}%"></div></div>
+      <div style="font-size:10px;color:var(--muted);min-width:48px;text-align:center">${windMax}mph ${windDomDir}</div>
+      <div class="fc-temps"><span class="fc-hi">${hi}°</span><span class="fc-lo">${lo}°</span>${precipTag}</div>
+      <div class="fc-chevron">›</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`<div class="section fade-in" style="padding-top:12px">
+    <div class="sec-label">7-day outlook · tap or swipe row for details</div>
+    ${rows}
+  </div>`;
+
+  // Wire up swipe-right on each forecast row to open modal
+  el.querySelectorAll('.fc-row').forEach(row=>{
+    let rx=0,ry=0,rt=0;
+    row.addEventListener('touchstart',e=>{rx=e.touches[0].clientX;ry=e.touches[0].clientY;rt=Date.now();},{passive:true});
+    row.addEventListener('touchend',e=>{
+      const dx=e.changedTouches[0].clientX-rx;
+      const dy=e.changedTouches[0].clientY-ry;
+      const dt=Date.now()-rt;
+      if(dt<400&&dx>40&&Math.abs(dy)<40){
+        // swipe right on a row = open that day's detail
+        row.style.transform='translateX(8px)';
+        setTimeout(()=>{row.style.transform='';openDayModal(+row.dataset.day);},120);
+      }
+    },{passive:true});
+  });
+}
+
+// ── FOREMAN TAB ──────────────────────────────────────────
+
+const FOREMAN_CHIPS={
+  roofing:['Safe to shingle today?','When do winds drop?','Wet roof risk?'],
+  concrete:['Good pour conditions?','Will it rain before cure?','Temp OK for mix?'],
+  painting:['Can we spray exteriors?','Humidity OK?','Wind safe to spray?'],
+  electrical:['Safe for outdoor work?','Storm risk today?','When does rain clear?'],
+  plumbing:['Freeze risk tonight?','OK for outdoor work?','Pipe conditions safe?'],
+  hvac:['Rooftop conditions safe?','Wind issues today?','Heat risk for crew?'],
+  framing:['Wind safe for walls?','When do gusts drop?','Good day to stand walls?'],
+  landscaping:['OK to spray today?','Heat risk for crew?','Rain coming?'],
+  excavation:['Ground conditions OK?','Rain impact on trenches?','Safe to dig?'],
+  farming:['Field conditions OK?','Frost risk tonight?','Safe to spray?'],
+  general:['Safe to work today?','Rain coming my way?','When\'s my best window?']
+};
+
+function buildConditionsContext(){
+  if(!currentData)return'No conditions loaded';
+  const c=currentData.current;
+  const temp=Math.round(c.temperature_2m);
+  const wind=kmh2mph(Math.round(c.wind_speed_10m));
+  const wmo=c.weather_code;
+  const rh=Math.round(c.relative_humidity_2m);
+  const rainPct=currentData.daily?.precipitation_probability_max?.[0]||0;
+  const alerts=getTradeAlerts(temp,wind,c.precipitation||0,wmo,rh);
+  const now=new Date();
+  const timeStr=now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
+  const sunrise=currentData.daily?.sunrise?.[0]?new Date(currentData.daily.sunrise[0]):null;
+  const sunset=currentData.daily?.sunset?.[0]?new Date(currentData.daily.sunset[0]):null;
+  const isDaytime=sunrise&&sunset?(now>sunrise&&now<sunset):true;
+  const dayPart=isDaytime?'daytime':'nighttime';
+  const sunriseStr=sunrise?sunrise.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true}):'--';
+  const sunsetStr=sunset?sunset.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true}):'--';
+  const hourlyForecast=currentData.hourly.time.map((t,i)=>({
+    t:new Date(t),temp:Math.round(currentData.hourly.temperature_2m[i]),
+    wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i])),
+    prob:currentData.hourly.precipitation_probability[i]||0,
+    precip:currentData.hourly.precipitation?.[i]||0,
+    wmo:currentData.hourly.weather_code[i]
+  })).filter(h=>h.t>=now).slice(0,12).map(h=>{
+    const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
+    return`${fmt}: ${h.temp}°F wind ${h.wind}mph rain ${h.prob}%${h.precip>0.01?' ('+h.precip.toFixed(2)+'")':''}`;
+  }).join(' | ');
+  const firstRain=currentData.hourly.time.map((t,i)=>({
+    t:new Date(t),prob:currentData.hourly.precipitation_probability[i]||0,
+    wmo:currentData.hourly.weather_code[i]
+  })).filter(h=>h.t>=now).find(h=>h.prob>40||DANGER.has(h.wmo)||WARN.has(h.wmo));
+  const rainWarning=firstRain?`First significant rain expected around ${firstRain.t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true})}`:'No significant rain in next 12 hours';
+  return`Location: ${currentLabel}. Time: ${timeStr} (${dayPart}). Sunrise: ${sunriseStr}, Sunset: ${sunsetStr}.\nCurrent: ${temp}°F, Wind: ${wind}mph ${windDirLabel(c.wind_direction_10m||0)}, Humidity: ${rh}%, Conditions: ${WMO[wmo]||'Unknown'}.\nRain today: ${rainPct}%. ${rainWarning}.\nTrade: ${TRADE_CONFIG[currentTrade]?.name||'General'}.\nActive alerts: ${alerts.map(a=>a.msg).join(', ')||'None'}.\nNext 12 hours: ${hourlyForecast}`;
+}
+
+function getRemainingForeman(){
+  console.log('getRemainingForeman called');
+  const today=new Date().toDateString();
+  const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
+  if(stored.date!==today)return 7;
+  return Math.max(0,7-(stored.count||0));
+}
+function incrementForeman(){
+  const today=new Date().toDateString();
+  const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
+  const count=stored.date===today?(stored.count||0)+1:1;
+  localStorage.setItem('jw_foreman_usage',JSON.stringify({date:today,count}));
+}
+
+function renderForemanTab(el){
+  if(!isPro()){showPaywall('foreman');el.innerHTML='';return;}
+  const name=localStorage.getItem('jw_user_name')||'Boss';
+  const chips=FOREMAN_CHIPS[currentTrade]||FOREMAN_CHIPS.general;
+  const remaining=getRemainingForeman();
+  const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
+  el.innerHTML=`<div class="fade-in" style="padding:20px 16px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px">🔨 ASK THE FOREMAN</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Hey ${name}, what do you need to know?</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      ${chips.map(c=>{const safe=c.replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');return`<div class="foreman-chip" onclick="submitForemanQuestion(&quot;${safe}&quot;)">${c}</div>`;}).join('')}
+      <div class="foreman-chip" onclick="submitForemanQuestion(&quot;Good for ${tradeName.toLowerCase()} work?&quot;)">Good for ${tradeName.toLowerCase()} work?</div>
+      <div class="foreman-chip" onclick="submitForemanQuestion(&quot;How long til it clears?&quot;)">How long til it clears?</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="text" id="foremanInput" placeholder="Ask anything..." autocomplete="off" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;font-size:14px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;" onkeydown="if(event.key==='Enter')submitForemanQuestion(this.value.trim())"/>
+      <button id="foremanMic" onclick="startVoiceInput()" style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);width:42px;height:42px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted)">🎤</button>
+      <button class="btn" onclick="submitForemanQuestion(document.getElementById('foremanInput').value.trim())" style="padding:11px 14px">Ask →</button>
+    </div>
+    <div id="foremanCount" style="font-size:10px;color:var(--subtle);text-align:center;margin-top:8px;letter-spacing:0.04em">${remaining} question${remaining===1?'':'s'} left today</div>
+    <div id="foremanResponse"></div>
+  </div>`;
+}
+
+function startVoiceInput(){
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){alert('Voice not supported. Try Chrome.');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec=new SR();rec.continuous=false;rec.interimResults=false;rec.lang='en-US';
+  const mic=document.getElementById('foremanMic');
+  if(mic){mic.textContent='🔴';mic.style.color='#e53935';}
+  rec.onresult=e=>{document.getElementById('foremanInput').value=e.results[0][0].transcript;if(mic){mic.textContent='🎤';mic.style.color='';}};
+  rec.onerror=()=>{if(mic){mic.textContent='🎤';mic.style.color='';}};
+  rec.onend=()=>{if(mic){mic.textContent='🎤';mic.style.color='';}};
+  rec.start();
+}
+
+async function submitForemanQuestion(preset){
+  console.log('submitForemanQuestion called with:', preset);
+  const input=document.getElementById('foremanInput');
+  const question=preset||input?.value?.trim();
+  console.log('Resolved question:', question);
+  console.log('Remaining questions:', getRemainingForeman());
+  if(!question)return;
+  const name=localStorage.getItem('jw_user_name')||'Boss';
+  const remaining=getRemainingForeman();
+  const resp=document.getElementById('foremanResponse');
+  if(remaining<=0){
+    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:var(--accent)">You've used your 7 for today, ${name}. The Foreman's off the clock. Back at it tomorrow.</div></div>`;
+    return;
+  }
+  if(input)input.value='';
+  if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:var(--muted)">Foreman's thinking...</div></div>`;
+
+  const style=localStorage.getItem('jw_foreman_style')||'shooter';
+  const styleInstructions={
+    shooter:'Be direct and blunt. No fluff. Real numbers, real advice. Brief.',
+    light:'Be direct but add dry jobsite humor. Keep it real but make them smile.',
+    facts:'Be purely factual. Numbers and times only, minimal commentary.'
+  };
+  const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
+  const systemPrompt=`You are a seasoned jobsite foreman with 30 years in the trades. You work for StrickerCo Solutions. You're talking to ${name}, a ${tradeName} worker.\n\nStyle: ${styleInstructions[style]}\n\nOccasionally — not every response — weave in a short piece of field wisdom. Things like: "The way you do one thing is the way you do everything." Keep it subtle, never preachy.\n\nKeep ALL answers under 80 words. Use ${name}'s name once naturally. Be specific — use actual numbers from the conditions.\n\nCurrent conditions at ${currentLabel}: ${buildConditionsContext()}`;
+
+  try{
+    const r=await fetch('/api/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,systemPrompt})});
+    const data=await r.json();
+    incrementForeman();
+    const rem=getRemainingForeman();
+    const countDisplay=document.getElementById('foremanCount');
+    if(countDisplay)countDisplay.textContent=rem+' question'+(rem===1?'':'s')+' left today';
+    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${(data.answer||'').replace(/"/g,'')}"</div></div>`;
+  }catch(e){
+    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:#ff6b6b">Foreman's off the grid. Check conditions manually.</div></div>`;
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('foremanModal').classList.contains('open'))closeForeman();
+    else if(document.getElementById('dayModal').classList.contains('open'))closeModalBtn();
+    else if(document.getElementById('settingsModal').classList.contains('open'))closeSettings();
+  }
+});
+
+// ── WIND DETAIL (tap stat box) ────────────────────────────
+function showWindDetail(){
+  if(!currentData)return;
+  navPush('modal');
+  const c=currentData.current;
+  const windMph=kmh2mph(Math.round(c.wind_speed_10m));
+  const gustMph=kmh2mph(Math.round(c.wind_gusts_10m));
+  const deg=Math.round(c.wind_direction_10m||0);
+  const dir=windDirLabel(deg);
+  document.getElementById('modalInner').innerHTML=`
+    <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    <div class="modal-title">💨 Wind Detail</div>
+    <div class="modal-sub">${currentLabel}</div>
+    <div style="text-align:center;padding:1.5rem 0 1rem">
+      <div style="font-size:72px;transition:transform 0.5s" ${windArrowStyle(deg)}>↑</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;margin-top:8px;color:var(--muted)">${dir} · ${deg}°</div>
+    </div>
+    <div class="detail-stats">
+      <div class="modal-stat"><div class="stat-lbl">Speed</div><div class="stat-val">${windMph}</div><div class="stat-sub">mph</div></div>
+      <div class="modal-stat"><div class="stat-lbl">Gusts</div><div class="stat-val">${gustMph}</div><div class="stat-sub">mph</div></div>
+      <div class="modal-stat"><div class="stat-lbl">Direction</div><div class="stat-val">${dir}</div><div class="stat-sub">${deg}°</div></div>
+    </div>
+    <div class="assessment-box">
+      <div class="stat-lbl" style="margin-bottom:6px">Trade impact</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        ${getWindTradeNote(windMph)}
+      </div>
+    </div>`;
+  document.getElementById('dayModal').classList.add('open');
+}
+
+function getWindTradeNote(mph){
+  if(mph<10)return'Calm conditions — favorable for all trade work including roofing and painting.';
+  if(mph<15)return'Light breeze — generally safe for all trades. Minimal impact on overhead work.';
+  if(mph<20)return'Moderate wind — use caution on scaffolding and roof work. Secure loose materials.';
+  if(mph<25)return'Roofing caution threshold reached. Elevated risk for work above 10 feet. Secure all panels and materials.';
+  if(mph<30)return'Roofing stop threshold — winds exceed safe limits for most roof work. Framing crews should secure wall panels.';
+  if(mph<40)return'High wind advisory — most elevated trade work should stop. Ground-level work still feasible.';
+  return'Dangerous wind — halt all outdoor trade work. Secure equipment and materials immediately.';
+}
+
+// ── DAY MODAL ─────────────────────────────────────────────
+function openDayModal(dayIndex){
+  if(!currentData)return;
+  navPush('modal');
+  const daily=currentData.daily;
+  const t=daily.time[dayIndex];
+  const d=new Date(t+'T12:00:00');
+  const lbl=dayIndex===0?'Today':dayIndex===1?'Tomorrow':DAYS[d.getDay()]+' '+d.toLocaleDateString([],{month:'short',day:'numeric'});
+  const hi=Math.round(daily.temperature_2m_max[dayIndex]);
+  const lo=Math.round(daily.temperature_2m_min[dayIndex]);
+  const wmo=daily.weather_code[dayIndex];
+  const rain=daily.precipitation_probability_max[dayIndex]||0;
+  const rainTotal=daily.precipitation_sum?.[dayIndex]||0;
+  const snowTotal=daily.snowfall_sum?.[dayIndex]||0;
+  const wind=kmh2mph(Math.round(daily.wind_speed_10m_max?.[dayIndex]||0));
+  const windDir=windDirLabel(daily.wind_direction_10m_dominant?.[dayIndex]);
+  const uv=Math.round(daily.uv_index_max?.[dayIndex]||0);
+  const sunrise=daily.sunrise?.[dayIndex]?fmtTime(daily.sunrise[dayIndex]):'--';
+  const sunset=daily.sunset?.[dayIndex]?fmtTime(daily.sunset[dayIndex]):'--';
+  const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
+
+  const dayStart=new Date(t+'T00:00:00');
+  const dayEnd=new Date(t+'T23:59:59');
+  const dayHours=currentData.hourly.time.map((ht,i)=>({
+    t:new Date(ht),temp:Math.round(currentData.hourly.temperature_2m[i]),
+    prob:currentData.hourly.precipitation_probability[i]||0,
+    wmo:currentData.hourly.weather_code[i],
+    wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i]))
+  })).filter(h=>h.t>=dayStart&&h.t<=dayEnd);
+
+  const hourlyHTML=dayHours.map(h=>{
+    const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
+    const isDanger=DANGER.has(h.wmo),isWarn=WARN.has(h.wmo);
+    return`<div class="dh-item${isDanger?' danger-hr':isWarn?' alert-hr':''}">
+      <div class="dh-time">${fmt}</div>
+      <div class="dh-ico">${ICO[h.wmo]||'☁️'}</div>
+      <div class="dh-tmp">${h.temp}°</div>
+      ${h.prob>10?`<div class="dh-pct">${h.prob}%</div>`:''}
+      <div class="dh-wind">${h.wind}mph</div>
+    </div>`;
+  }).join('');
+
+  const dayAlerts=getTradeAlerts(Math.round((hi+lo)/2),wind,rain>40?0.15:0,wmo,60);
+  const dayStatus=dayAlerts.length===0?`<span style="color:var(--safe)">✓ ${getWorkabilityAllClear()}</span>`:dayAlerts.map(a=>`<span style="color:${a.level==='danger'?'#ff6b6b':'var(--accent)'}">${a.msg}</span>`).join('<br>');
+
+  document.getElementById('modalInner').innerHTML=`
+    <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    <div class="modal-title">${ICO[wmo]||'☁️'} ${lbl}</div>
+    <div class="modal-sub">${WMO[wmo]||''} · High ${hi}° / Low ${lo}°</div>
+    <div class="detail-stats">
+      <div class="modal-stat"><div class="stat-lbl">Rain chance</div><div class="stat-val">${rain}%</div></div>
+      <div class="modal-stat"><div class="stat-lbl">Wind max</div><div class="stat-val">${wind}</div><div class="stat-sub">mph ${windDir}</div></div>
+      <div class="modal-stat"><div class="stat-lbl">UV Index</div><div class="stat-val">${uv}</div></div>
+    </div>
+    ${(rainTotal>0.01||snowTotal>0.1)?`<div class="detail-stats">
+      ${rainTotal>0.01?`<div class="modal-stat"><div class="stat-lbl">Rain total</div><div class="stat-val">${rainTotal.toFixed(2)}"</div></div>`:''}
+      ${snowTotal>0.1?`<div class="modal-stat"><div class="stat-lbl">Snow total</div><div class="stat-val">${snowTotal.toFixed(1)}"</div></div>`:''}
+    </div>`:''}
+    <div class="assessment-box">
+      <div class="stat-lbl" style="margin-bottom:6px">${tradeName} assessment</div>
+      <div style="font-size:13px;line-height:1.6">${dayStatus}</div>
+    </div>
+    <div class="modal-stat" style="margin-bottom:1rem;padding:10px 14px;display:flex;gap:2rem;">
+      <div><div class="stat-lbl">Sunrise</div><div style="font-size:15px;font-weight:600">🌅 ${sunrise}</div></div>
+      <div><div class="stat-lbl">Sunset</div><div style="font-size:15px;font-weight:600">🌇 ${sunset}</div></div>
+    </div>
+    <div class="sec-label">Hourly breakdown</div>
+    <div class="dh-grid">${hourlyHTML||'<div style="color:var(--muted);font-size:13px;padding:8px 0">Hourly data unavailable</div>'}</div>`;
+  document.getElementById('dayModal').classList.add('open');
+}
+
+function closeModal(e){if(e.target===document.getElementById('dayModal'))closeModalBtn();}
+function closeModalBtn(){
+  if(!document.getElementById('dayModal').classList.contains('open'))return;
+  document.getElementById('dayModal').classList.remove('open');
+  history.back();
+}
+
+// ── SETTINGS MODAL ────────────────────────────────────────
+function openSettings(){
+  navPush('settings');
+  const name=localStorage.getItem('jw_user_name')||'';
+  const style=localStorage.getItem('jw_foreman_style')||'shooter';
+  const trade=currentTrade;
+  const s=getTrialState();
+  const tradeOpts=['general','roofing','concrete','electrical','plumbing','hvac','framing','painting','landscaping','excavation','farming'];
+  const tradeLabels=['General / All Trades','Roofing','Concrete / Masonry','Electrical','Plumbing','HVAC','Framing / Carpentry','Painting','Landscaping','Excavation / Grading','Farming / Agriculture'];
+  const inner=document.getElementById('settingsInner');
+  const isFounder=localStorage.getItem('jw_founding_crew')==='true';
+  const briefingOn=localStorage.getItem('jw_morning_briefing')!=='false';
+  inner.innerHTML=`
+    <button class="modal-close" onclick="closeSettings()">✕</button>
+    <div style="padding:0 4px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px">⚙ SETTINGS</div>
+      ${isFounder?`<div style="background:var(--surface3);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--accent);letter-spacing:0.06em;margin-bottom:4px;display:flex;align-items:center;gap:6px"><svg width="12" height="15" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg> FOUNDING CREW MEMBER</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">You're in early. When Crew Mode launches, it's yours — on us.<br><span style="color:var(--subtle)">That's the way we do things. 🔨</span></div>
+      </div>`:''}
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600">Your name</div>
+        <input type="text" id="settingsName" value="${name.replace(/"/g,'&quot;')}" placeholder="Boss" autocomplete="off" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Foreman style</div>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:13px;color:var(--text)">
+          <input type="radio" name="sstyle" value="shooter" ${style==='shooter'?'checked':''} style="accent-color:var(--accent)"/> Straight shooter — direct, no fluff
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:13px;color:var(--text)">
+          <input type="radio" name="sstyle" value="light" ${style==='light'?'checked':''} style="accent-color:var(--accent)"/> Keep it light — real talk with humor
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:13px;color:var(--text)">
+          <input type="radio" name="sstyle" value="facts" ${style==='facts'?'checked':''} style="accent-color:var(--accent)"/> Just the facts — numbers only
+        </label>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600">Default trade</div>
+        <select id="settingsTrade" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;-webkit-appearance:none;appearance:none;">
+          ${tradeOpts.map((v,i)=>`<option value="${v}" ${v===trade?'selected':''}>${tradeLabels[i]}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Morning briefing</div>
+        <div class="notify-row">
+          <div><div class="notify-label">5AM nudge</div><div class="notify-sub">Check conditions before the day starts</div></div>
+          <label class="toggle"><input type="checkbox" id="s-briefing" ${briefingOn?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Notifications</div>
+        <div class="notify-row">
+          <div><div class="notify-label">Severe weather</div><div class="notify-sub">NWS tornado, storm, flood</div></div>
+          <label class="toggle"><input type="checkbox" id="s-severe" ${notifySettings.severe?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notify-row">
+          <div><div class="notify-label">High wind alerts</div><div class="notify-sub">Trade threshold warnings</div></div>
+          <label class="toggle"><input type="checkbox" id="s-wind" ${notifySettings.wind?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notify-row">
+          <div><div class="notify-label">Rain incoming</div><div class="notify-sub">1-2 hours before precip</div></div>
+          <label class="toggle"><input type="checkbox" id="s-rain" ${notifySettings.rain?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      ${s.status==='pro'?`
+        <div style="background:var(--surface3);border:1px solid var(--accent);border-left:3px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">${isFounder?'<span style="display:inline-flex;align-items:center;gap:4px"><svg width="12" height="15" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg> FOUNDING CREW · PRO</span>':'⭐ PRO — ACTIVE'}</div>
+          ${['🔨 Ask the Foreman','📍 Saved locations','📝 Job site notes','🌅 Morning briefing',isFounder?'⭐ Crew Mode free at launch':''].filter(Boolean).map(f=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">✓ ${f}</div>`).join('')}
+        </div>
+      `:s.status==='trial'?`
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">PRO TRIAL — ${s.daysLeft} days remaining</div>
+          ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved locations','📝 Job site notes','🌅 Morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">✓ ${f}</div>`).join('')}
+          <a href="${STRIPE_LINK}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.06em;padding:10px;border-radius:var(--radius-sm);text-decoration:none;text-align:center;margin-top:12px">UPGRADE NOW — $4.99/YEAR →</a>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">You've wasted more than $4.99 waiting on weather that never came. Not anymore.</div>
+        </div>
+      `:`
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#ff6b6b;margin-bottom:8px">TRIAL ENDED</div>
+          <a href="${STRIPE_LINK}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.06em;padding:10px;border-radius:var(--radius-sm);text-decoration:none;text-align:center">UNLOCK PRO — $4.99/YEAR →</a>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">You've wasted more than $4.99 waiting on weather that never came. Not anymore.</div>
+        </div>
+      `}
+      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.08em;margin-bottom:6px">🔨 CREW MODE — COMING SOON</div>
+        <div style="font-size:12px;color:var(--subtle);line-height:1.6">One account. Your whole crew. Share jobsite conditions and morning briefings with everyone on site.</div>
+        ${isFounder?'<div style="font-size:11px;color:var(--accent);margin-top:6px">Founding Crew members get it free.</div>':''}
+      </div>
+      ${s.status!=='pro'?`<div style="padding:12px 0;border-top:1px solid var(--border);margin-top:4px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Already paid on another device?</div>
+        <div style="display:flex;gap:8px">
+          <input type="email" id="restoreEmail" placeholder="Enter your payment email" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;min-width:0"/>
+          <button onclick="restorePro()" style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;white-space:nowrap;letter-spacing:0.04em">Restore</button>
+        </div>
+        <div id="restoreStatus" style="font-size:12px;margin-top:6px;min-height:18px"></div>
+      </div>`:''}
+      <div style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px;margin-bottom:12px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Always free</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8">✓ Current conditions & trade alerts<br>✓ 7-day forecast<br>✓ Hourly breakdown<br>✓ GPS & ZIP search<br>✓ Wind, UV, sunrise/sunset<br>✓ No ads. Ever.</div>
+      </div>
+      <button class="btn" style="width:100%;padding:12px" onclick="saveSettings()">Save & Close</button>
+    </div>`;
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function saveSettings(){
+  const name=(document.getElementById('settingsName')?.value||'').trim()||'Boss';
+  const style=document.querySelector('input[name=sstyle]:checked')?.value||'shooter';
+  const trade=document.getElementById('settingsTrade')?.value||'general';
+  localStorage.setItem('jw_user_name',name);
+  localStorage.setItem('jw_foreman_style',style);
+  currentTrade=trade;
+  localStorage.setItem('jw_trade',trade);
+  document.getElementById('tradeSelect').value=trade;
+  const briefingChecked=document.getElementById('s-briefing')?.checked;
+  localStorage.setItem('jw_morning_briefing',briefingChecked?'true':'false');
+  notifySettings.severe=document.getElementById('s-severe')?.checked||false;
+  notifySettings.wind=document.getElementById('s-wind')?.checked||false;
+  notifySettings.rain=document.getElementById('s-rain')?.checked||false;
+  localStorage.setItem('jw_notify',JSON.stringify(notifySettings));
+  closeSettingsSilent();
+  history.back();
+  if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));
+}
+
+async function restorePro(){
+  const email=document.getElementById('restoreEmail')?.value?.trim();
+  const status=document.getElementById('restoreStatus');
+  if(!email){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email first.</span>';return;}
+  if(status)status.innerHTML='<span style="color:var(--muted)">Checking...</span>';
+  try{
+    const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const data=await r.json();
+    if(data.success){
+      localStorage.setItem('jw_pro','true');
+      if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
+      if(status)status.innerHTML='<span style="color:var(--safe)">✓ Pro restored. Welcome back. 🔨</span>';
+      setTimeout(()=>{closeSettingsSilent();history.back();renderLocs();if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));},1500);
+    } else {
+      if(status)status.innerHTML=`<span style="color:#ff6b6b">${data.message||'Not found.'}</span>`;
+    }
+  }catch(e){
+    if(status)status.innerHTML='<span style="color:#ff6b6b">Could not verify. Check connection and try again.</span>';
+  }
+}
+
+function closeSettingsOverlay(e){
+  if(e.target===document.getElementById('settingsModal'))closeSettings();
+}
+function closeSettingsSilent(){
+  document.getElementById('settingsModal').classList.remove('open');
+}
+function closeSettings(){
+  if(!document.getElementById('settingsModal').classList.contains('open'))return;
+  closeSettingsSilent();
+  history.back();
+}
+
+function checkPushAlerts(tradeAlerts,nws){
+  if(Notification.permission!=='granted')return;
+  const dangerous=tradeAlerts.filter(a=>a.level==='danger');
+  if(notifySettings.severe&&nws?.length){
+    const sev=nws.find(a=>['Tornado Warning','Severe Thunderstorm Warning','Flash Flood Warning'].includes(a.event));
+    if(sev){new Notification('⚠ '+sev.event,{body:sev.headline||'Active NWS alert for your location',icon:'/icons/icon-192.png'});}
+  }
+  if(notifySettings.wind&&dangerous.some(a=>a.msg.includes('Wind'))){
+    new Notification('💨 High Wind Alert',{body:dangerous.find(a=>a.msg.includes('Wind'))?.msg||'Wind exceeds safe work threshold',icon:'/icons/icon-192.png'});
+  }
+  if(notifySettings.rain&&dangerous.some(a=>a.msg.includes('Wet')||a.msg.includes('Rain'))){
+    new Notification('🌧️ Rain Alert',{body:'Precipitation expected — plan accordingly',icon:'/icons/icon-192.png'});
+  }
+}
+
+// ── FOREMAN MODAL (kept for popstate compat) ─────────────
+function openForeman(){switchTab('foreman');}
+function closeForemanSilent(){document.getElementById('foremanModal').classList.remove('open');}
+function closeForemanOverlay(e){if(e.target===document.getElementById('foremanModal'))closeForeman();}
+function closeForeman(){if(!document.getElementById('foremanModal').classList.contains('open'))return;closeForemanSilent();history.back();}
+
+// ── JOB SITE NOTES ────────────────────────────────────────
+function getNoteLocLabel(){
+  // If a saved loc is active, use it
+  if(activeLoc!==null&&savedLocs[activeLoc])return savedLocs[activeLoc].label;
+  // Auto-match current coords to a saved loc
+  if(currentLat!=null&&currentLon!=null){
+    const match=savedLocs.find(l=>Math.abs(l.lat-currentLat)<0.01&&Math.abs(l.lon-currentLon)<0.01);
+    if(match)return match.label;
+  }
+  // Fall back to current label for unsaved locations
+  return currentLabel||null;
+}
+
+function getSiteNotes(){
+  return JSON.parse(localStorage.getItem('jw_notes')||'{}');
+}
+function saveSiteNote(label,text){
+  const notes=getSiteNotes();
+  if(text)notes[label]=text.slice(0,500);
+  else delete notes[label];
+  localStorage.setItem('jw_notes',JSON.stringify(notes));
+}
+
+function editSiteNote(){
+  if(!isPro()){showPaywall('notes');return;}
+  const label=getNoteLocLabel();
+  if(!label)return;
+  const notes=getSiteNotes();
+  const existing=notes[label]||'';
+  const card=document.getElementById('siteNoteCard');
+  const target=card||document.querySelector('.add-note-link');
+  if(!target)return;
+  const container=document.createElement('div');
+  container.className='site-note-card';
+  container.id='siteNoteCard';
+  container.innerHTML=`
+    <div class="note-header"><span class="note-label">📋 Job Site Note</span></div>
+    <textarea id="noteTextarea" maxlength="500" placeholder="e.g. Low-lying site, floods at 0.25in rain...">${existing.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+    <div style="text-align:right;font-size:10px;color:var(--subtle)" id="noteCharCount">${existing.length}/500</div>
+    <div class="note-save-row">
+      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="renderCurrentTab()">Cancel</button>
+      <button class="btn" style="font-size:12px;padding:6px 12px" onclick="saveSiteNoteFromUI()">Save</button>
+    </div>`;
+  target.replaceWith(container);
+  const ta=document.getElementById('noteTextarea');
+  ta.addEventListener('input',()=>{document.getElementById('noteCharCount').textContent=ta.value.length+'/500';});
+  ta.focus();
+}
+
+function saveSiteNoteFromUI(){
+  const label=getNoteLocLabel();
+  if(!label)return;
+  const text=document.getElementById('noteTextarea')?.value?.trim()||'';
+  saveSiteNote(label,text);
+  renderCurrentTab();
+}
+
+function deleteSiteNote(){
+  const label=getNoteLocLabel();
+  if(!label)return;
+  saveSiteNote(label,'');
+  renderCurrentTab();
+}
+
+// ── SAVED LOCATIONS ───────────────────────────────────────
+function renderFounderBadge(){
+  const existing=document.getElementById('founderTopBadge');
+  if(existing)existing.remove();
+  if(localStorage.getItem('jw_founding_crew')!=='true')return;
+  const logoDiv=document.querySelector('.topbar .logo');
+  if(!logoDiv)return;
+  const badge=document.createElement('div');
+  badge.id='founderTopBadge';
+  badge.style.cssText='display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle;cursor:default;';
+  badge.title='Founder · Set the Standard';
+  badge.innerHTML=`<svg width="14" height="17" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><path d="M60 14 L104 34 L104 74 Q104 100 60 118 Q16 100 16 74 L16 34 Z" fill="none" stroke="#f5a623" stroke-width="2" opacity="0.4"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg>`;
+  logoDiv.appendChild(badge);
+}
+
+function renderLocs(){
+  const row=document.getElementById('locsRow');
+  const s=getTrialState();
+  const expired=s.status==='expired';
+  const pro=isPro();
+
+  // Always show the row
+  row.style.display='flex';
+
+  let html='';
+
+  if(savedLocs.length===0){
+    // No saved locs yet — show a hint chip
+    if(pro){
+      html+=`<div class="loc-chip add-chip" onclick="saveCurrentLoc()" title="Save current location">
+        📍 Save this spot
+      </div>`;
+    } else if(expired){
+      html+=`<div class="loc-chip add-chip pro-locked" onclick="showPaywall('locations')" title="Pro feature">
+        🔒 Save locations · Pro
+      </div>`;
+    } else {
+      // Trial — show save
+      html+=currentLabel?`<div class="loc-chip add-chip" onclick="saveCurrentLoc()">📍 Save this spot</div>`:
+        `<div class="loc-chip" style="opacity:0.4;cursor:default">📍 Search a ZIP to save it</div>`;
+    }
+  } else {
+    // Show saved locs
+    html+=savedLocs.map((l,i)=>{
+      if(expired){
+        // Locked — show but greyed with lock, tapping shows paywall
+        return`<div class="loc-chip locked" onclick="showPaywall('locations')" title="Upgrade to access saved locations">
+          🔒 ${l.label}
+        </div>`;
+      }
+      return`<div class="loc-chip${activeLoc===i?' active':''}" onclick="loadSaved(${i})">
+        ${l.label}
+        <span class="remove" onclick="removeLoc(event,${i})">×</span>
+      </div>`;
+    }).join('');
+
+    // Add save button if not expired and current location not already saved
+    if(!expired&&currentLabel&&!savedLocs.find(l=>l.label===currentLabel)){
+      html+=`<div class="loc-chip add-chip" onclick="saveCurrentLoc()">+ Save</div>`;
+    } else if(expired){
+      html+=`<div class="loc-chip add-chip pro-locked" onclick="showPaywall('locations')">🔒 Upgrade</div>`;
+    }
+  }
+
+  row.innerHTML=html;
+}
+
+function saveCurrentLoc(){
+  if(!isPro()){showPaywall('locations');return;}
+  if(!currentLabel)return;
+  if(savedLocs.find(l=>l.label===currentLabel))return;
+  if(savedLocs.length>=5){alert('Max 5 saved locations. Remove one first.');return;}
+  savedLocs.push({label:currentLabel,lat:currentLat,lon:currentLon});
+  localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
+  renderLocs();
+}
+
+function removeLoc(e,i){
+  e.stopPropagation();
+  savedLocs.splice(i,1);
+  if(activeLoc===i)activeLoc=null;
+  localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
+  renderLocs();
+}
+
+async function loadSaved(i){
+  activeLoc=i;renderLocs();
+  const l=savedLocs[i];
+  if(l.lat&&l.lon)await loadByLatLon(l.lat,l.lon,l.label);
+  else{document.getElementById('locInput').value=l.label;doSearch();}
+}
+
+// ── LOAD WEATHER ──────────────────────────────────────────
+async function loadByLatLon(lat,lon,label){
+  document.getElementById('content').innerHTML='<div class="loading">Loading conditions</div>';
+  document.getElementById('nwsAlerts').innerHTML='';
+  clearAlert();
+  currentLat=lat;currentLon=lon;
+  try{
+    const[data,alerts]=await Promise.all([fetchWx(lat,lon),fetchNWSAlerts(lat,lon)]);
+    data._lat=lat;data._lon=lon;
+    nwsAlerts=alerts;
+    currentData=data;currentLabel=label;
+    document.getElementById('navTabs').style.display='flex';
+    renderNWSAlerts(alerts);
+    renderCurrentTab();
+    renderLocs();
+    // Fetch Tomorrow.io in background — storm countdown only
+    fetchTomorrowForecast(lat,lon).then(h=>{tomorrowHourly=h;if(activeTab==='conditions')renderStormBanner();});
+    scheduleMorningBriefing();
+  }catch(e){
+    console.error('[loadByLatLon] FAILED:',e.name,e.message,e);
+    document.getElementById('content').innerHTML=`<div class="error-state">Could not load weather. Check connection and try again.<br><span style="font-size:10px;color:var(--subtle);margin-top:8px;display:block">${e.name}: ${e.message}</span></div>`;
+  }
+}
+
+async function doSearch(){
+  const q=document.getElementById('locInput').value.trim();
+  if(!q)return;
+  document.getElementById('content').innerHTML='<div class="loading">Searching</div>';
+  clearAlert();
+  try{
+    const geo=await geoSearch(q);
+    const label=geo.name+(geo.admin1?', '+geo.admin1:'');
+    document.getElementById('locInput').value=label;
+    activeLoc=null;
+    await loadByLatLon(geo.latitude,geo.longitude,label);
+  }catch(e){
+    console.error('Search error:',e);
+    document.getElementById('content').innerHTML='<div class="error-state">Location not found. Try a ZIP code or city name.</div>';
+  }
+}
+
+function useGPS(){
+  if(!navigator.geolocation){alert('GPS not available on this device.');return;}
+  document.getElementById('content').innerHTML='<div class="loading">Getting your location</div>';
+  clearAlert();
+  navigator.geolocation.getCurrentPosition(
+    async pos=>{const{latitude:lat,longitude:lon}=pos.coords;document.getElementById('locInput').value='';activeLoc=null;await loadByLatLon(lat,lon,'Your location');},
+    ()=>{document.getElementById('content').innerHTML='<div class="error-state">Location access denied. Enter a city or ZIP above.</div>';}
+  );
+}
+
+function onTradeChange(){
+  currentTrade=document.getElementById('tradeSelect').value;
+  localStorage.setItem('jw_trade',currentTrade);
+  if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));
+}
+
+document.getElementById('locInput').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+
+// ── ONBOARDING ────────────────────────────────────────────
+function showOnboarding(){
+  if(localStorage.getItem('jw_user_name'))return;
+  const overlay=document.createElement('div');
+  overlay.id='onboardOverlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML=`<div style="width:100%;max-width:380px;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">👷</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:var(--text);margin-bottom:4px">Welcome to JobSite Weather</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Built for the trades · by StrickerCo</div>
+    <div style="text-align:left;margin-bottom:20px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600">What should the Foreman call you?</div>
+      <input type="text" id="onboardName" placeholder="First name (or leave blank for Boss)" autocomplete="off" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;font-size:14px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;"/>
+    </div>
+    <div style="text-align:left;margin-bottom:24px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">How do you want him to talk?</div>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;color:var(--text)">
+        <input type="radio" name="fstyle" value="shooter" checked style="accent-color:var(--accent)"/> Straight shooter — direct, no fluff
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;color:var(--text)">
+        <input type="radio" name="fstyle" value="light" style="accent-color:var(--accent)"/> Keep it light — real talk with some humor
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;font-size:13px;color:var(--text)">
+        <input type="radio" name="fstyle" value="facts" style="accent-color:var(--accent)"/> Just the facts — numbers only
+      </label>
+    </div>
+    <button class="btn" style="width:100%;padding:13px;font-size:15px" onclick="completeOnboarding()">Let's go →</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function completeOnboarding(){
+  const name=(document.getElementById('onboardName')?.value||'').trim()||'Boss';
+  const style=document.querySelector('input[name=fstyle]:checked')?.value||'shooter';
+  localStorage.setItem('jw_user_name',name);
+  localStorage.setItem('jw_foreman_style',style);
+  document.getElementById('onboardOverlay')?.remove();
+}
+
+// ── MORNING BRIEFING ──────────────────────────────────────
+function scheduleMorningBriefing(){
+  if(Notification.permission!=='granted')return;
+  if(localStorage.getItem('jw_morning_briefing')==='false')return;
+  const lastScheduled=localStorage.getItem('jw_briefing_scheduled');
+  const today=new Date().toDateString();
+  if(lastScheduled===today)return;
+  const now=new Date();
+  const tomorrow5am=new Date();
+  tomorrow5am.setDate(tomorrow5am.getDate()+1);
+  tomorrow5am.setHours(5,0,0,0);
+  const msUntil5am=tomorrow5am-now;
+  setTimeout(()=>{
+    const nm=localStorage.getItem('jw_user_name')||'Boss';
+    const trade=localStorage.getItem('jw_trade')||'general';
+    const tradeNames={general:'your crew',roofing:'the roofing crew',concrete:'the concrete crew',electrical:'the electrical crew',plumbing:'the plumbing crew',hvac:'the HVAC crew',framing:'the framing crew',painting:'the painting crew',landscaping:'the landscaping crew',excavation:'the excavation crew',farming:'the farming operation'};
+    new Notification(`Morning ${nm} — JobSite Weather`,{body:`Time to check conditions for ${tradeNames[trade]||'your crew'}. Tap to see what the day looks like.`,icon:'/icons/icon-192.png',badge:'/icons/icon-72.png',tag:'morning-briefing',renotify:false});
+    localStorage.setItem('jw_briefing_scheduled',new Date().toDateString());
+  },msUntil5am);
+  localStorage.setItem('jw_briefing_scheduled',today);
+}
+
+// ── INIT ──────────────────────────────────────────────────
+showOnboarding();
+
+// Auto-activate Pro if returning from Stripe payment
+if(new URLSearchParams(window.location.search).get('pro')==='true'){
+  localStorage.setItem('jw_pro','true');
+  if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
+  window.history.replaceState({},'',window.location.pathname);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);},500);
+}
+
+const savedTrade=localStorage.getItem('jw_trade');
+if(savedTrade){currentTrade=savedTrade;document.getElementById('tradeSelect').value=savedTrade;}
+
+// Clear saved locs only if somehow corrupted
+if(!Array.isArray(savedLocs))savedLocs=[];
+
+renderLocs();
+renderFounderBadge();
+showTrialToast();
+
+// ── SWIPE GESTURES ────────────────────────────────────────
+(()=>{
+  const TABS=['conditions','forecast','foreman'];
+  let swipeStartX=0,swipeStartY=0,swipeStartTime=0,swipeBlocked=false;
+
+  document.querySelector('.app').addEventListener('touchstart',e=>{
+    swipeStartX=e.touches[0].clientX;
+    swipeStartY=e.touches[0].clientY;
+    swipeStartTime=Date.now();
+    // Block if touch starts inside ANY scrollable or interactive container
+    swipeBlocked=!!e.target.closest(
+      '.hourly-wrap,.hourly-inner,.hr-item,.locs-row,.dh-grid,.modal,.fc-row,select,input,button'
+    );
+  },{passive:true});
+
+  document.querySelector('.app').addEventListener('touchend',e=>{
+    if(swipeBlocked)return;
+    const dx=e.changedTouches[0].clientX-swipeStartX;
+    const dy=e.changedTouches[0].clientY-swipeStartY;
+    const dt=Date.now()-swipeStartTime;
+    // Must be fast, strongly horizontal — dx must be 3x greater than dy
+    if(dt>350||Math.abs(dx)<65||Math.abs(dy)>Math.abs(dx)*0.33)return;
+    const cur=TABS.indexOf(activeTab);
+    if(dx<0&&cur<TABS.length-1)switchTab(TABS[cur+1]);
+    else if(dx>0&&cur>0)switchTab(TABS[cur-1]);
+  },{passive:true});
+})();
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+
+(async()=>{
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
+      async()=>{
+        try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
+        catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code or tap GPS to get started.</div>';}
+      }
+    );
+  } else {
+    document.getElementById('locInput').value='Glasgow, MO';
+    try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
+    catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a city or ZIP to get started.</div>';}
+  }
+})();
+</script>
+</body>
+</html>
