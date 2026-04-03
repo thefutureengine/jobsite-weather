@@ -1,3 +1,90 @@
+// ── TRADE ALERTS ──────────────────────────────────────────
+function getTradeAlerts(temp,windMph,precip,wmo,rh){
+  const trade=TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general;
+  const alerts=[];
+  const hi=heatIdx(temp,rh);
+  const isStorm=DANGER.has(wmo);
+  const isRain=WARN.has(wmo)||precip>0.1;
+  if(isStorm)return[{level:'danger',msg:"Sky's throwing a fit. Get off the jobsite, it's not worth it."}];
+  const wd=trade.windDanger||45,wc=trade.windCaution||25;
+  if(currentTrade==='roofing'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — the roof isn't going anywhere. You might be.`});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph gusting up there. Hold your felt and your hat.`});
+    if(isRain)alerts.push({level:'danger',msg:'Wet roof. Gravity wins every time. Call it.'});
+  }else if(currentTrade==='concrete'){
+    if(temp<40)alerts.push({level:'danger',msg:`${temp}°F — concrete cures slower than your Monday morning crew.`});
+    else if(temp<50)alerts.push({level:'caution',msg:`${temp}°F — she'll cure, just not on your schedule. Use cold-weather mix.`});
+    if(temp>90)alerts.push({level:'caution',msg:`${temp}°F and climbing — add water reducer or add regrets.`});
+    if(isRain||precip>0.05)alerts.push({level:'danger',msg:'Rain on fresh concrete. Bold move. Don\'t.'});
+  }else if(currentTrade==='electrical'){
+    if(isRain)alerts.push({level:'danger',msg:'It\'s raining. Outdoor electrical and water have a well-documented relationship.'});
+    if(windMph>=wd)alerts.push({level:'caution',msg:`${windMph} mph — secure your conduit runs and anything that can fly.`});
+  }else if(currentTrade==='painting'){
+    if(isRain||precip>0.01)alerts.push({level:'danger',msg:'Any moisture ruins fresh paint. Today\'s exterior work is tomorrow\'s sanding project.'});
+    if(temp<50)alerts.push({level:'danger',msg:`${temp}°F — paint won't bond. You'll be back to sand it anyway.`});
+    if(temp>95)alerts.push({level:'caution',msg:`${temp}°F — dries too fast, brush marks guaranteed. Work early or don't work.`});
+    if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — that's not overspray, that's your neighbor's car.`});
+  }else if(currentTrade==='framing'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — walls go up easier than they come down sideways.`});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — that wall panel is a sail. Tie it off.`});
+    if(isRain)alerts.push({level:'caution',msg:'Wet lumber moves, warps, and swells. Tomorrow\'s problem is today\'s decision.'});
+  }else if(currentTrade==='plumbing'){
+    if(temp<32)alerts.push({level:'danger',msg:`${temp}°F — pipes don't care about your schedule.`});
+    else if(temp<40)alerts.push({level:'caution',msg:`${temp}°F and dropping. Keep an eye on exposed runs overnight.`});
+  }else if(currentTrade==='hvac'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — no rooftop unit work today. Come back when it's calm.`});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph up top. Strap it down before it becomes an insurance claim.`});
+    if(hi>=95)alerts.push({level:'caution',msg:`${hi}°F heat index — you're essentially inside an oven. Hydrate or go home.`});
+  }else if(currentTrade==='excavation'){
+    if(isRain||precip>0.1)alerts.push({level:'caution',msg:'Rain makes ground unstable. Check your trench walls — OSHA definitely will.'});
+    if(windMph>=wd)alerts.push({level:'caution',msg:`${windMph} mph — dust is your whole atmosphere right now.`});
+  }else if(currentTrade==='landscaping'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — skip the spraying. You're just donating chemicals to the neighbors.`});
+    if(hi>=100)alerts.push({level:'caution',msg:`${hi}°F heat index — your crew is not a cactus. Get them water and shade.`});
+  }else if(currentTrade==='farming'){
+    if(temp<28)alerts.push({level:'danger',msg:`${temp}°F — hard freeze. Crops and equipment both hate this. Move fast.`});
+    else if(temp<34)alerts.push({level:'caution',msg:`${temp}°F — frost possible overnight. Keep an eye on it.`});
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — equipment stability risk. Park it and wait it out.`});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — hold off on spraying. You'll just be chasing drift all day.`});
+    if(isRain||precip>0.1)alerts.push({level:'caution',msg:'Field\'s soft. Run heavy equipment now and you\'ll regret it for weeks.'});
+  }else if(currentTrade==='gc'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — coordinate all trade crews. High wind across the site.`});
+    if(isRain||precip>0.3)alerts.push({level:'danger',msg:'Rain affecting multiple trades on site. Adjust schedules.'});
+    if(temp<32)alerts.push({level:'danger',msg:`${temp}°F — freezing. Concrete and masonry holds, check all trades.`});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — check crane and lift operations.`});
+  }else if(currentTrade==='architect'){
+    if(isRain||precip>0.5)alerts.push({level:'caution',msg:'Rain likely — site visit conditions poor.'});
+    if(windMph>=30)alerts.push({level:'caution',msg:`${windMph} mph — outdoor inspection difficult.`});
+    if(temp<20)alerts.push({level:'danger',msg:`${temp}°F — extreme cold. Limit site exposure time.`});
+  }else if(currentTrade==='inspector'){
+    if(isRain||precip>0.4)alerts.push({level:'caution',msg:'Rain — exterior inspection conditions poor.'});
+    if(temp<10)alerts.push({level:'danger',msg:`${temp}°F — extreme cold. Limit outdoor exposure.`});
+  }else if(currentTrade==='surveyor'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — wind affecting instrument accuracy.`});
+    if(isRain||precip>0.3)alerts.push({level:'danger',msg:'Rain — equipment and visibility issues.'});
+  }else if(currentTrade==='solar'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — wind too high for panel handling.`});
+    if(isRain)alerts.push({level:'danger',msg:'Wet roof — no installation today.'});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — use caution with large panels.`});
+  }else if(currentTrade==='demolition'){
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — debris control required. Wind is a hazard.`});
+    if(isRain||precip>0.3)alerts.push({level:'caution',msg:'Rain — dust suppression active, mud hazard on site.'});
+  }else{
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — secure everything that can move and get off elevated work.`});
+    else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — tie down your materials. Wind doesn't care about your bid sheet.`});
+    if(isRain)alerts.push({level:'caution',msg:`${WMO[wmo]||'Rain'} moving through. Keep an eye on it.`});
+  }
+  if(hi>=105)alerts.push({level:'danger',msg:`Heat index ${hi}°F — mandatory breaks, no exceptions. This is how people die on jobsites.`});
+  else if(hi>=95)alerts.push({level:'caution',msg:`Heat index ${hi}°F — water, shade, rotate your crew. Don't be a hero.`});
+  if(temp<28)alerts.push({level:'danger',msg:`${temp}°F — frostbite is faster than you think. Limit exposure.`});
+  return alerts;
+}
+
+function getWorkabilityAllClear(){
+  const msgs={roofing:'Clear skies, calm wind. Good day to be on a roof.',concrete:'Temps and conditions are dialed in. Pour with confidence.',electrical:'Dry and calm. Go make sparks — the intentional kind.',painting:'Low wind, good temp, no rain. Perfect coat weather.',framing:'Conditions look solid. Go make some noise.',plumbing:'No freeze risk, no storms. Good day for pipe.',hvac:'Clean conditions. Rooftop work is a go.',excavation:'Ground should be stable. Dig away.',landscaping:'Good day to make it look like you planned it this way.',farming:'Field conditions look favorable. Make hay while the sun shines — literally.',gc:'All trades clear. Good day to run the site.',architect:'Clear conditions. Good day for site visits.',inspector:'Inspection conditions favorable. Get it done.',surveyor:'Calm and clear. Instruments will be accurate.',solar:'Low wind, dry roof. Install day.',demolition:'Clear conditions. Knock it down.',general:'No issues flagged. Go make some money.'};
+  return msgs[currentTrade]||msgs.general;
+}
+
 // ── API ────────────────────────────────────────────────────
 async function fetchWx(lat,lon){
   const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation,snowfall&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,precipitation_sum,snowfall_sum&wind_speed_unit=kmh&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7`;
