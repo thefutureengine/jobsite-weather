@@ -114,7 +114,6 @@ async function loadByLatLon(lat,lon,label){
     renderNWSAlerts(alerts);
     renderCurrentTab();
     renderLocs();
-    if(typeof checkProjectReturn==='function')checkProjectReturn();
     // Fetch Tomorrow.io in background — storm countdown only
     fetchTomorrowForecast(lat,lon).then(h=>{tomorrowHourly=h;if(activeTab==='conditions')renderStormBanner();});
     scheduleMorningBriefing();

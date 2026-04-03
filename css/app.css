@@ -71,8 +71,10 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
 .trade-row select option{background:#111f2e;color:#f0f4f8;}
 
 /* ── SAVED LOCS ── */
-.locs-row{display:flex;gap:6px;padding:8px 16px;background:var(--surface);border-top:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
-.locs-row::-webkit-scrollbar{display:none;}
+.locs-row{display:flex;flex-wrap:nowrap;gap:8px;padding:8px 16px;padding-bottom:4px;background:var(--surface);border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(245,166,35,0.3) transparent;}
+.locs-row::-webkit-scrollbar{height:3px;}
+.locs-row::-webkit-scrollbar-track{background:transparent;}
+.locs-row::-webkit-scrollbar-thumb{background:rgba(245,166,35,0.3);border-radius:2px;}
 .loc-chip{flex-shrink:0;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all 0.15s;}
 .loc-chip:hover{border-color:var(--border2);}
 .loc-chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
@@ -300,3 +302,8 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
 .jw-toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:500;background:rgba(17,31,46,0.95);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:12px;color:var(--muted);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap;animation:toastIn 0.3s ease;pointer-events:none;max-width:90vw;text-align:center;}
 .jw-toast.out{animation:toastOut 0.3s ease forwards;}
 .jw-toast .toast-accent{color:var(--accent);font-weight:600;}
+
+/* ── PROJECT MODE DATA ── */
+.pm-data-value{font-family:'Inter',sans-serif;font-weight:700;color:var(--text);}
+.pm-data-label{font-family:'Inter',sans-serif;font-weight:500;font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:0.05em;text-transform:uppercase;}
+.pm-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}

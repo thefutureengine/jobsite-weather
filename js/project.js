@@ -80,62 +80,88 @@ async function loadProjectSites(){
   if(!sites.length){content.innerHTML=`<div style="text-align:center;padding:40px 16px"><div style="font-size:40px;margin-bottom:12px">📍</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--text);margin-bottom:8px">No job sites yet</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">Add your first site to get started.</div><button onclick="showAddSiteFlow()" style="background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:12px 24px;border:none;border-radius:var(--radius);cursor:pointer;">+ ADD FIRST SITE</button></div>`;return;}
   content.innerHTML='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase">YOUR SITES TODAY</div>';
   const siteData=await Promise.all(sites.map(async site=>{
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
   }));
-  siteData.forEach(site=>{content.innerHTML+=buildSiteCard(site);});
+  siteData.forEach((site,i)=>{content.innerHTML+=buildSiteCard(site,i);});
   content.innerHTML+='<div style="height:20px"></div>';
 }
 
-function buildSiteCard(site){
+function buildSiteCard(site,index){
   if(!site.weatherData)return`<div style="margin:10px 16px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px"><div style="font-size:13px;color:var(--text)">${site.label}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Could not load</div></div>`;
   const c=site.weatherData.current,temp=Math.round(c.temperature_2m),wind=Math.round(c.wind_speed_10m),wmo=c.weather_code,rh=Math.round(c.relative_humidity_2m),precip=c.precipitation||0;
+  const rainPct=site.weatherData.hourly?.precipitation_probability?Math.max(...site.weatherData.hourly.precipitation_probability.slice(0,12)):0;
   const alerts=getTradeAlerts(temp,wind,precip,wmo,rh);
   const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
   const status=hasDanger?'HOLD':hasCaution?'CAUTION':'GO';
   const statusColor=hasDanger?'#e53935':hasCaution?'#ff9800':'#4caf50';
-  const statusEmoji=hasDanger?'🔴':hasCaution?'🟡':'🟢';
+  const statusRGB=hasDanger?'229,57,53':hasCaution?'255,152,0':'76,175,80';
   const borderColor=hasDanger?'rgba(229,57,53,0.35)':hasCaution?'rgba(255,152,0,0.35)':'rgba(76,175,80,0.35)';
   const topAlert=alerts[0]?.msg||'No issues — good conditions';
-  // Tomorrow AM check
   const tom=new Date();tom.setDate(tom.getDate()+1);
   const tHrs=(site.weatherData.hourly?.time||[]).map((t,i)=>({t:new Date(t),prob:site.weatherData.hourly.precipitation_probability[i]||0})).filter(h=>h.t.getDate()===tom.getDate()&&h.t.getHours()<12);
   const tRain=tHrs.filter(h=>h.prob>60);
   const tAlert=tRain.length>=3?`⚡ Tomorrow AM: ${Math.round(tRain[0].prob)}% rain`:null;
-  const noteKey='jw_note_'+site.label;
-  const noteVal=localStorage.getItem(noteKey)||'';
-  return`<div style="margin:10px 16px;background:var(--surface3);border:1px solid ${borderColor};border-radius:var(--radius);overflow:hidden">
-    <div style="padding:14px 14px 10px;display:flex;align-items:flex-start;justify-content:space-between">
-      <div style="flex:1"><div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:var(--text)">${site.label}</div>${site.projectName?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${site.projectName}</div>`:''}${site.trade?`<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;text-transform:uppercase;letter-spacing:0.05em">${TRADE_CONFIG[site.trade]?.name||site.trade}</div>`:''}</div>
-      <div style="text-align:right;flex-shrink:0;margin-left:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;color:${statusColor}">${statusEmoji} ${status}</div><div style="font-size:10px;color:rgba(255,255,255,0.3)">${temp}°F · ${wind}mph</div></div>
+  const safeLabel=site.label.replace(/'/g,"\\'");
+  return`<div id="pmCard_${index}" style="margin:10px 16px;background:var(--surface3);border:1px solid ${borderColor};border-radius:var(--radius);overflow:hidden">
+    <div onclick="toggleSiteCard(${index})" style="padding:14px;cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div class="pm-status-dot" style="background:${statusColor}"></div>
+      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${site.projectName||site.label}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${site.label}${site.trade?' · '+(TRADE_CONFIG[site.trade]?.name||site.trade):''}</div></div>
+      <div style="text-align:right;flex-shrink:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:${statusColor}">${status}</div><div class="pm-data-label">${temp}°F · ${wind}mph</div></div>
+      <div style="color:rgba(255,255,255,0.2);font-size:14px;flex-shrink:0" id="pmChevron_${index}">▼</div>
     </div>
-    <div style="padding:0 14px 10px;font-size:12px;color:var(--muted)">${topAlert}</div>
-    ${tAlert?`<div style="padding:6px 14px;background:rgba(245,166,35,0.08);border-top:1px solid rgba(245,166,35,0.15);font-size:11px;color:#f5a623">${tAlert}</div>`:''}
-    <div style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 14px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.08em;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:6px">SITE NOTES</div><textarea placeholder="Add a note..." onblur="savePMNote('${site.label.replace(/'/g,"\\'")}',this.value)" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px;font-size:12px;color:var(--text);font-family:'Barlow',sans-serif;resize:none;min-height:50px;box-sizing:border-box;">${noteVal}</textarea></div>
-    <div style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 14px;display:flex;gap:8px">
-      <button onclick="viewSiteConditions(${site.lat},${site.lon},'${site.label.replace(/'/g,"\\'")}')" style="flex:1;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.04em;">VIEW CONDITIONS</button>
-      <button onclick="editSiteMeta('${site.label.replace(/'/g,"\\'")}')" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);cursor:pointer;">EDIT</button>
-      <button onclick="confirmDeleteSite('${site.label.replace(/'/g,"\\'")}')" style="background:rgba(229,57,53,0.08);border:1px solid rgba(229,57,53,0.2);border-radius:6px;padding:8px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(229,57,53,0.6);cursor:pointer;">✕</button>
+    <div id="pmExpanded_${index}" style="display:none;border-top:1px solid rgba(255,255,255,0.06)">
+      <div style="padding:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="text-align:center"><div class="pm-data-value" style="font-size:22px">${temp}°</div><div class="pm-data-label">Temp</div></div>
+        <div style="text-align:center"><div class="pm-data-value" style="font-size:22px">${wind}</div><div class="pm-data-label">MPH Wind</div></div>
+        <div style="text-align:center"><div class="pm-data-value" style="font-size:22px">${rainPct}%</div><div class="pm-data-label">Rain</div></div>
+        <div style="text-align:center"><div class="pm-data-value" style="font-size:22px">${rh}%</div><div class="pm-data-label">Humidity</div></div>
+      </div>
+      <div style="padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(${statusRGB},0.06)">
+        <div class="pm-status-dot" style="background:${statusColor}"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:${statusColor}">${status}</div>
+        <div style="font-size:12px;color:var(--muted);flex:1">${topAlert}</div>
+      </div>
+      <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06)"><div class="pm-data-label" style="margin-bottom:8px">NEXT 6 HOURS</div><div style="display:flex;gap:6px;overflow-x:auto">${buildMiniHourly(site.weatherData)}</div></div>
+      ${tAlert?`<div style="padding:8px 14px;background:rgba(245,166,35,0.08);border-bottom:1px solid rgba(245,166,35,0.15);font-size:11px;color:#f5a623">${tAlert}</div>`:''}
+      <div style="padding:14px"><div class="pm-data-label" style="margin-bottom:10px">SITE NOTES</div><div id="pmNoteHistory_${index}" style="max-height:180px;overflow-y:auto;margin-bottom:12px">${buildNotesHistory(site.label)}</div><textarea id="pmNoteInput_${index}" placeholder="Add a note for this site..." rows="3" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);resize:none;box-sizing:border-box;margin-bottom:8px"></textarea><button onclick="savePMNote_new('${safeLabel}',${index})" style="width:100%;background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);border-radius:6px;padding:9px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.06em;">SAVE NOTE →</button></div>
+      <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px">
+        <button onclick="editSiteMeta('${safeLabel}')" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);cursor:pointer;letter-spacing:0.04em;">EDIT SITE</button>
+        <button onclick="confirmDeleteSite('${safeLabel}')" style="background:rgba(229,57,53,0.08);border:1px solid rgba(229,57,53,0.2);border-radius:6px;padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(229,57,53,0.6);cursor:pointer;">REMOVE</button>
+      </div>
     </div>
   </div>`;
 }
 
-function savePMNote(label,value){localStorage.setItem('jw_note_'+label,value);if(typeof saveNoteToSupabase==='function')saveNoteToSupabase(label,value);}
-
-function viewSiteConditions(lat,lon,label){
-  sessionStorage.setItem('jw_came_from_project','true');
-  closeProjectMode();
-  loadByLatLon(lat,lon,label);
+function toggleSiteCard(index){
+  const expanded=document.getElementById('pmExpanded_'+index);
+  const chevron=document.getElementById('pmChevron_'+index);
+  if(!expanded)return;
+  const isOpen=expanded.style.display!=='none';
+  document.querySelectorAll('[id^="pmExpanded_"]').forEach(el=>el.style.display='none');
+  document.querySelectorAll('[id^="pmChevron_"]').forEach(el=>el.textContent='▼');
+  if(!isOpen){expanded.style.display='block';if(chevron)chevron.textContent='▲';}
 }
 
-function checkProjectReturn(){
-  if(sessionStorage.getItem('jw_came_from_project')==='true'){
-    const topbar=document.querySelector('.topbar');if(!topbar)return;
-    const existing=document.getElementById('projectReturnBtn');if(existing)existing.remove();
-    const btn=document.createElement('button');btn.id='projectReturnBtn';
-    btn.onclick=()=>{sessionStorage.removeItem('jw_came_from_project');btn.remove();openProjectMode();};
-    btn.style.cssText='background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:4px 10px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.04em;margin-left:8px;';
-    btn.textContent='‹ PROJECTS';
-    topbar.appendChild(btn);
+function buildMiniHourly(wd){
+  if(!wd?.hourly)return'<div style="color:var(--muted);font-size:11px">No data</div>';
+  const now=new Date();
+  return wd.hourly.time.map((t,i)=>({t:new Date(t),temp:Math.round(wd.hourly.temperature_2m[i]),prob:wd.hourly.precipitation_probability[i]||0,wmo:wd.hourly.weather_code[i]})).filter(h=>h.t>=now).slice(0,6).map(h=>{
+    const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
+    const dotColor=h.prob>60?'#e53935':h.prob>30?'#ff9800':'#4caf50';
+    return`<div style="text-align:center;flex-shrink:0;min-width:44px"><div style="width:6px;height:6px;border-radius:50%;background:${dotColor};margin:0 auto 4px"></div><div class="pm-data-value" style="font-size:13px">${h.temp}°</div><div class="pm-data-label" style="font-size:9px">${fmt}</div></div>`;
+  }).join('');
+}
+
+function savePMNote_new(label,index){
+  const input=document.getElementById('pmNoteInput_'+index);
+  if(!input?.value?.trim())return;
+  const saved=saveNoteForSite(label,input.value);
+  if(saved){
+    input.value='';
+    const history=document.getElementById('pmNoteHistory_'+index);
+    if(history)history.innerHTML=buildNotesHistory(label);
+    const btn=input.nextElementSibling;
+    if(btn){const orig=btn.textContent;btn.textContent='✓ SAVED';btn.style.color='#4caf50';btn.style.borderColor='rgba(76,175,80,0.4)';setTimeout(()=>{btn.textContent=orig;btn.style.color='#f5a623';btn.style.borderColor='rgba(245,166,35,0.4)';},1500);}
   }
 }
 
