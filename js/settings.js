@@ -1,0 +1,174 @@
+// ── SETTINGS MODAL ────────────────────────────────────────
+function openSettings(){
+  navPush('settings');
+  const name=localStorage.getItem('jw_user_name')||'';
+  const style=localStorage.getItem('jw_foreman_style')||'shooter';
+  const trade=currentTrade;
+  const s=getTrialState();
+  const tradeOpts=['general','roofing','concrete','electrical','plumbing','hvac','framing','painting','landscaping','excavation','farming','gc','architect','inspector','surveyor','solar','demolition'];
+  const tradeLabels=['General / All Trades','Roofing','Concrete / Masonry','Electrical','Plumbing','HVAC','Framing / Carpentry','Painting','Landscaping','Excavation / Grading','Farming / Agriculture','General Contractor','Architect / Designer','Inspector','Surveyor','Solar Installation','Demolition'];
+  const inner=document.getElementById('settingsInner');
+  const isFounder=localStorage.getItem('jw_founding_crew')==='true';
+  const briefingOn=localStorage.getItem('jw_morning_briefing')!=='false';
+  inner.innerHTML=`
+    <button class="modal-close" onclick="closeSettings()">✕</button>
+    <div style="padding:0 4px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px">⚙ SETTINGS</div>
+      ${isFounder?`<div style="background:var(--surface3);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--accent);letter-spacing:0.06em;margin-bottom:4px;display:flex;align-items:center;gap:6px"><svg width="12" height="15" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg> FOUNDING CREW MEMBER</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">You're in early. When Crew Mode launches, it's yours — on us.<br><span style="color:var(--subtle)">That's the way we do things. 🔨</span></div>
+      </div>`:''}
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600">Your name</div>
+        <input type="text" id="settingsName" value="${name.replace(/"/g,'&quot;')}" placeholder="Boss" autocomplete="off" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Foreman style</div>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:13px;color:var(--text)">
+          <input type="radio" name="sstyle" value="shooter" ${style==='shooter'?'checked':''} style="accent-color:var(--accent)"/> Straight shooter — direct, no fluff
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:13px;color:var(--text)">
+          <input type="radio" name="sstyle" value="light" ${style==='light'?'checked':''} style="accent-color:var(--accent)"/> Keep it light — real talk with humor
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:13px;color:var(--text)">
+          <input type="radio" name="sstyle" value="facts" ${style==='facts'?'checked':''} style="accent-color:var(--accent)"/> Just the facts — numbers only
+        </label>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600">Default trade</div>
+        <select id="settingsTrade" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;-webkit-appearance:none;appearance:none;">
+          ${tradeOpts.map((v,i)=>`<option value="${v}" ${v===trade?'selected':''}>${tradeLabels[i]}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Morning briefing</div>
+        <div class="notify-row">
+          <div><div class="notify-label">5AM nudge</div><div class="notify-sub">Check conditions before the day starts</div></div>
+          <label class="toggle"><input type="checkbox" id="s-briefing" ${briefingOn?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Notifications</div>
+        <div class="notify-row">
+          <div><div class="notify-label">Severe weather</div><div class="notify-sub">NWS tornado, storm, flood</div></div>
+          <label class="toggle"><input type="checkbox" id="s-severe" ${notifySettings.severe?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notify-row">
+          <div><div class="notify-label">High wind alerts</div><div class="notify-sub">Trade threshold warnings</div></div>
+          <label class="toggle"><input type="checkbox" id="s-wind" ${notifySettings.wind?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notify-row">
+          <div><div class="notify-label">Rain incoming</div><div class="notify-sub">1-2 hours before precip</div></div>
+          <label class="toggle"><input type="checkbox" id="s-rain" ${notifySettings.rain?'checked':''}><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      ${s.status==='pro'?`
+        <div style="background:var(--surface3);border:1px solid var(--accent);border-left:3px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">${isFounder?'<span style="display:inline-flex;align-items:center;gap:4px"><svg width="12" height="15" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg> FOUNDING CREW · PRO</span>':'⭐ PRO — ACTIVE'}</div>
+          ${['🔨 Ask the Foreman','📍 Saved locations','📝 Job site notes','🌅 Morning briefing',isFounder?'⭐ Crew Mode free at launch':''].filter(Boolean).map(f=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">✓ ${f}</div>`).join('')}
+        </div>
+      `:s.status==='trial'?`
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">PRO TRIAL — ${s.daysLeft} days remaining</div>
+          ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved locations','📝 Job site notes','🌅 Morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">✓ ${f}</div>`).join('')}
+          <a href="${STRIPE_LINK}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.06em;padding:10px;border-radius:var(--radius-sm);text-decoration:none;text-align:center;margin-top:12px">UPGRADE NOW — $4.99/YEAR →</a>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">You've wasted more than $4.99 waiting on weather that never came. Not anymore.</div>
+        </div>
+      `:`
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#ff6b6b;margin-bottom:8px">TRIAL ENDED</div>
+          <a href="${STRIPE_LINK}" target="_blank" style="display:block;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.06em;padding:10px;border-radius:var(--radius-sm);text-decoration:none;text-align:center">UNLOCK PRO — $4.99/YEAR →</a>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">You've wasted more than $4.99 waiting on weather that never came. Not anymore.</div>
+        </div>
+      `}
+      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.08em;margin-bottom:6px">🔨 CREW MODE — COMING SOON</div>
+        <div style="font-size:12px;color:var(--subtle);line-height:1.6">One account. Your whole crew. Share jobsite conditions and morning briefings with everyone on site.</div>
+        ${isFounder?'<div style="font-size:11px;color:var(--accent);margin-top:6px">Founding Crew members get it free.</div>':''}
+      </div>
+      ${s.status!=='pro'?`<div style="padding:12px 0;border-top:1px solid var(--border);margin-top:4px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Already paid on another device?</div>
+        <div style="display:flex;gap:8px">
+          <input type="email" id="restoreEmail" placeholder="Enter your payment email" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;min-width:0"/>
+          <button onclick="restorePro()" style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;white-space:nowrap;letter-spacing:0.04em">Restore</button>
+        </div>
+        <div id="restoreStatus" style="font-size:12px;margin-top:6px;min-height:18px"></div>
+      </div>`:''}
+      <div style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px;margin-bottom:12px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Always free</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8">✓ Current conditions & trade alerts<br>✓ 7-day forecast<br>✓ Hourly breakdown<br>✓ GPS & ZIP search<br>✓ Wind, UV, sunrise/sunset<br>✓ No ads. Ever.</div>
+      </div>
+      <button class="btn" style="width:100%;padding:12px" onclick="saveSettings()">Save & Close</button>
+    </div>`;
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function saveSettings(){
+  const name=(document.getElementById('settingsName')?.value||'').trim()||'Boss';
+  // DEV ONLY — REMOVE BEFORE MERGE
+  if(name.toUpperCase()==='CREWPLAN'){localStorage.setItem('jw_crew','true');showToast('Crew Plan activated 🔨',2000);}
+  const style=document.querySelector('input[name=sstyle]:checked')?.value||'shooter';
+  const trade=document.getElementById('settingsTrade')?.value||'general';
+  localStorage.setItem('jw_user_name',name);
+  localStorage.setItem('jw_foreman_style',style);
+  currentTrade=trade;
+  localStorage.setItem('jw_trade',trade);
+  document.getElementById('tradeSelect').value=trade;
+  const briefingChecked=document.getElementById('s-briefing')?.checked;
+  localStorage.setItem('jw_morning_briefing',briefingChecked?'true':'false');
+  notifySettings.severe=document.getElementById('s-severe')?.checked||false;
+  notifySettings.wind=document.getElementById('s-wind')?.checked||false;
+  notifySettings.rain=document.getElementById('s-rain')?.checked||false;
+  localStorage.setItem('jw_notify',JSON.stringify(notifySettings));
+  closeSettingsSilent();
+  history.back();
+  if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));
+}
+
+async function restorePro(){
+  const email=document.getElementById('restoreEmail')?.value?.trim();
+  const status=document.getElementById('restoreStatus');
+  if(!email){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email first.</span>';return;}
+  if(status)status.innerHTML='<span style="color:var(--muted)">Checking...</span>';
+  try{
+    const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const data=await r.json();
+    if(data.success){
+      localStorage.setItem('jw_pro','true');
+      if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
+      if(status)status.innerHTML='<span style="color:var(--safe)">✓ Pro restored. Welcome back. 🔨</span>';
+      setTimeout(()=>{closeSettingsSilent();history.back();renderLocs();if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));},1500);
+    } else {
+      if(status)status.innerHTML=`<span style="color:#ff6b6b">${data.message||'Not found.'}</span>`;
+    }
+  }catch(e){
+    if(status)status.innerHTML='<span style="color:#ff6b6b">Could not verify. Check connection and try again.</span>';
+  }
+}
+
+function closeSettingsOverlay(e){
+  if(e.target===document.getElementById('settingsModal'))closeSettings();
+}
+function closeSettingsSilent(){
+  document.getElementById('settingsModal').classList.remove('open');
+}
+function closeSettings(){
+  if(!document.getElementById('settingsModal').classList.contains('open'))return;
+  closeSettingsSilent();
+  history.back();
+}
+
+function checkPushAlerts(tradeAlerts,nws){
+  if(Notification.permission!=='granted')return;
+  const dangerous=tradeAlerts.filter(a=>a.level==='danger');
+  if(notifySettings.severe&&nws?.length){
+    const sev=nws.find(a=>['Tornado Warning','Severe Thunderstorm Warning','Flash Flood Warning'].includes(a.event));
+    if(sev){new Notification('⚠ '+sev.event,{body:sev.headline||'Active NWS alert for your location',icon:'/icons/icon-192.png'});}
+  }
+  if(notifySettings.wind&&dangerous.some(a=>a.msg.includes('Wind'))){
+    new Notification('💨 High Wind Alert',{body:dangerous.find(a=>a.msg.includes('Wind'))?.msg||'Wind exceeds safe work threshold',icon:'/icons/icon-192.png'});
+  }
+  if(notifySettings.rain&&dangerous.some(a=>a.msg.includes('Wet')||a.msg.includes('Rain'))){
+    new Notification('🌧️ Rain Alert',{body:'Precipitation expected — plan accordingly',icon:'/icons/icon-192.png'});
+  }
+}

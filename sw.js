@@ -1,8 +1,18 @@
-const CACHE_NAME = 'jobsite-wx-v6';
+const CACHE_NAME = 'jobsite-wx-v7';
 const PRECACHE = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/css/app.css',
+  '/js/app.js',
+  '/js/trial.js',
+  '/js/weather.js',
+  '/js/locations.js',
+  '/js/notes.js',
+  '/js/foreman.js',
+  '/js/project.js',
+  '/js/settings.js',
+  '/js/notifications.js'
 ];
 
 self.addEventListener('install', e => {
