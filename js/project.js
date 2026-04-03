@@ -12,13 +12,14 @@ function deleteLoc(lat,lon){
 function updateProjectPill(){
   const pill=document.getElementById('projectPill');
   if(!pill)return;
+  pill.removeAttribute('style');
+  const base="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.08em;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transform:translateZ(0);flex-shrink:0;transition:all 0.2s ease;";
   if(isProject()){
-    pill.style.cssText='background:rgba(245,166,35,0.1);border:1.5px solid #f5a623;color:#f5a623;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.08em;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transform:translateZ(0);flex-shrink:0;';
-    pill.textContent='📋 PROJECT';
+    pill.style.cssText=base+'background:rgba(245,166,35,0.1);border:1.5px solid #f5a623;color:#f5a623;';
   }else{
-    pill.style.cssText='background:transparent;border:1px solid rgba(245,166,35,0.18);color:rgba(245,166,35,0.28);font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.08em;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transform:translateZ(0);flex-shrink:0;';
-    pill.textContent='📋 PROJECT';
+    pill.style.cssText=base+'background:transparent;border:1px solid rgba(245,166,35,0.18);color:rgba(245,166,35,0.28);';
   }
+  pill.textContent='📋 PROJECTS';
 }
 
 function handleProjectTap(){
@@ -41,7 +42,6 @@ function openProjectMode(){
     <div style="background:#0d1e2e;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;flex-shrink:0;">
       <button class="pm-tab" id="pmTabSites" onclick="switchPMTab('sites')" style="flex:1;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.06em;background:none;border:none;color:#f5a623;border-bottom:2px solid #f5a623;cursor:pointer;">SITES</button>
       <button class="pm-tab" id="pmTabCalendar" onclick="switchPMTab('calendar')" style="flex:1;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.06em;background:none;border:none;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer;">7-DAY VIEW</button>
-      <button class="pm-tab" id="pmTabDispatch" onclick="switchPMTab('dispatch')" style="flex:1;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.06em;background:none;border:none;color:rgba(255,255,255,0.4);border-bottom:2px solid transparent;cursor:pointer;">DISPATCH</button>
     </div>
     <div style="flex:1;overflow-y:auto;" id="projectContent"><div style="padding:20px;text-align:center;color:var(--muted)">Loading sites...</div></div>`;
   document.body.appendChild(panel);
@@ -64,7 +64,6 @@ function switchPMTab(tab){
   if(active){active.style.color='#f5a623';active.style.borderBottom='2px solid #f5a623';}
   if(tab==='sites')loadProjectSites();
   if(tab==='calendar')loadProjectCalendar();
-  if(tab==='dispatch')loadProjectDispatch();
 }
 
 function showProjectGate(){
@@ -254,32 +253,6 @@ async function loadProjectCalendar(){
     }).join('')}</div>`;
   });
   html+='<div style="padding:12px 16px;font-size:10px;color:rgba(255,255,255,0.2)">Based on 7-day forecast data</div>';
-  content.innerHTML=html;
-}
-
-// ── DISPATCH VIEW ─────────────────────────────────────────
-async function loadProjectDispatch(){
-  const content=document.getElementById('projectContent');if(!content)return;
-  content.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">Loading dispatch...</div>';
-  const sites=getSavedLocs();
-  if(!sites.length){content.innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted)">No sites added yet</div>';return;}
-  const siteData=await Promise.all(sites.map(async s=>{
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...s,weatherData:await r.json()};}catch(e){return{...s,weatherData:null};}
-  }));
-  const ranked=siteData.map(s=>{
-    if(!s.weatherData)return{...s,status:'UNKNOWN',priority:99,topAlert:'No data'};
-    const c=s.weatherData.current;const alerts=getTradeAlerts(Math.round(c.temperature_2m),Math.round(c.wind_speed_10m),c.precipitation||0,c.weather_code,Math.round(c.relative_humidity_2m));
-    const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
-    return{...s,status:hasDanger?'HOLD':hasCaution?'CAUTION':'GO',priority:hasDanger?3:hasCaution?2:1,topAlert:alerts[0]?.msg||'Clear conditions'};
-  }).sort((a,b)=>a.priority-b.priority);
-  let html=`<div style="padding:12px 16px 0;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">TODAY'S DISPATCH PRIORITY</div><div style="padding:0 16px 12px;font-size:11px;color:rgba(255,255,255,0.3)">Sites ranked by workability</div>`;
-  ranked.forEach((s,i)=>{
-    const color=s.status==='HOLD'?'#e53935':s.status==='CAUTION'?'#ff9800':'#4caf50';
-    const emoji=s.status==='HOLD'?'🔴':s.status==='CAUTION'?'🟡':'🟢';
-    const border=s.status==='HOLD'?'rgba(229,57,53,0.3)':s.status==='CAUTION'?'rgba(255,152,0,0.3)':'rgba(76,175,80,0.3)';
-    html+=`<div style="margin:8px 16px;background:var(--surface3);border:1px solid ${border};border-radius:var(--radius);padding:14px;display:flex;align-items:center;gap:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0;width:24px;text-align:center">${i+1}</div><div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text)">${s.projectName||s.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.topAlert}</div></div><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:${color};flex-shrink:0">${emoji} ${s.status}</div></div>`;
-  });
-  html+='<div style="padding:12px 16px;font-size:11px;color:rgba(255,255,255,0.25);font-style:italic">Conditions are a guide. You know your sites best.</div>';
   content.innerHTML=html;
 }
 

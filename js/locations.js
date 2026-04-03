@@ -110,6 +110,7 @@ async function loadByLatLon(lat,lon,label){
     data._lat=lat;data._lon=lon;
     nwsAlerts=alerts;
     currentData=data;currentLabel=label;
+    localStorage.setItem('jw_last_lat',lat);localStorage.setItem('jw_last_lon',lon);localStorage.setItem('jw_last_label',label);
     document.getElementById('navTabs').style.display='flex';
     renderNWSAlerts(alerts);
     renderCurrentTab();

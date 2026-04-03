@@ -150,7 +150,7 @@ if(new URLSearchParams(window.location.search).get('pro')==='true'){
   localStorage.setItem('jw_pro','true');
   if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
   window.history.replaceState({},'',window.location.pathname);
-  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);},500);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();},500);
 }
 
 const savedTrade=localStorage.getItem('jw_trade');
@@ -201,6 +201,14 @@ if('serviceWorker' in navigator){
 }
 
 (async()=>{
+  // Try restoring last location first
+  const lastLat=localStorage.getItem('jw_last_lat');
+  const lastLon=localStorage.getItem('jw_last_lon');
+  const lastLabel=localStorage.getItem('jw_last_label');
+  if(lastLat&&lastLon&&lastLabel){
+    await loadByLatLon(parseFloat(lastLat),parseFloat(lastLon),lastLabel);
+    return;
+  }
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
       async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
@@ -210,9 +218,8 @@ if('serviceWorker' in navigator){
       }
     );
   } else {
-    document.getElementById('locInput').value='Glasgow, MO';
     try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-    catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a city or ZIP to get started.</div>';}
+    catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP to get started.</div>';}
   }
 })();
 
