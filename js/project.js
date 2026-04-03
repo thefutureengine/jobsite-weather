@@ -13,11 +13,11 @@ function updateProjectPill(){
   const pill=document.getElementById('projectPill');
   if(!pill)return;
   if(isProject()){
-    pill.style.background='rgba(245,166,35,0.12)';pill.style.border='1.5px solid #f5a623';pill.style.color='#f5a623';
-    pill.innerHTML='📋 PROJECT';
+    pill.style.cssText='background:rgba(245,166,35,0.1);border:1.5px solid #f5a623;color:#f5a623;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.08em;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transform:translateZ(0);flex-shrink:0;';
+    pill.textContent='📋 PROJECT';
   }else{
-    pill.style.background='transparent';pill.style.border='1.5px solid rgba(245,166,35,0.2)';pill.style.color='rgba(245,166,35,0.3)';
-    pill.innerHTML='📋 PROJECT 🔒';
+    pill.style.cssText='background:transparent;border:1px solid rgba(245,166,35,0.18);color:rgba(245,166,35,0.28);font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:800;letter-spacing:0.08em;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transform:translateZ(0);flex-shrink:0;';
+    pill.textContent='📋 PROJECT';
   }
 }
 
@@ -123,7 +123,7 @@ function buildSiteCard(site,index){
       </div>
       <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06)"><div class="pm-data-label" style="margin-bottom:8px">NEXT 6 HOURS</div><div style="display:flex;gap:6px;overflow-x:auto">${buildMiniHourly(site.weatherData)}</div></div>
       ${tAlert?`<div style="padding:8px 14px;background:rgba(245,166,35,0.08);border-bottom:1px solid rgba(245,166,35,0.15);font-size:11px;color:#f5a623">${tAlert}</div>`:''}
-      <div style="padding:14px"><div class="pm-data-label" style="margin-bottom:10px">SITE NOTES</div><div id="pmNoteHistory_${index}" style="max-height:180px;overflow-y:auto;margin-bottom:12px">${buildNotesHistory(site.label)}</div><textarea id="pmNoteInput_${index}" placeholder="Add a note for this site..." rows="3" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);resize:none;box-sizing:border-box;margin-bottom:8px"></textarea><button onclick="savePMNote_new('${safeLabel}',${index})" style="width:100%;background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);border-radius:6px;padding:9px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.06em;">SAVE NOTE →</button></div>
+      <div style="padding:14px"><div class="pm-data-label" style="margin-bottom:10px">SITE NOTES</div>${loadNotesForSite(site.label).length>=3?`<div style="margin-bottom:10px"><button onclick="summarizeSiteNotes('${safeLabel}',${index})" id="summarizeBtn_${index}" style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:6px;padding:7px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(245,166,35,0.7);cursor:pointer;letter-spacing:0.06em;width:100%;">🔨 ASK THE FOREMAN — SUMMARIZE NOTES</button><div id="noteSummary_${index}" style="margin-top:8px;font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.7);line-height:1.6;display:none;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.15);border-radius:6px;padding:10px 12px;"></div></div>`:''}<div id="pmNoteHistory_${index}" style="max-height:180px;overflow-y:auto;margin-bottom:12px">${buildNotesHistory(site.label)}</div><textarea id="pmNoteInput_${index}" placeholder="Add a note for this site..." rows="3" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);resize:none;box-sizing:border-box;margin-bottom:8px"></textarea><button onclick="savePMNote_new('${safeLabel}',${index})" style="width:100%;background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);border-radius:6px;padding:9px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;color:#f5a623;cursor:pointer;letter-spacing:0.06em;">SAVE NOTE →</button></div>
       <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px">
         <button onclick="editSiteMeta('${safeLabel}')" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);cursor:pointer;letter-spacing:0.04em;">EDIT SITE</button>
         <button onclick="confirmDeleteSite('${safeLabel}')" style="background:rgba(229,57,53,0.08);border:1px solid rgba(229,57,53,0.2);border-radius:6px;padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;color:rgba(229,57,53,0.6);cursor:pointer;">REMOVE</button>
@@ -281,6 +281,30 @@ async function loadProjectDispatch(){
   });
   html+='<div style="padding:12px 16px;font-size:11px;color:rgba(255,255,255,0.25);font-style:italic">Conditions are a guide. You know your sites best.</div>';
   content.innerHTML=html;
+}
+
+// ── AI NOTES SUMMARY ──────────────────────────────────────
+async function summarizeSiteNotes(label,index){
+  const btn=document.getElementById('summarizeBtn_'+index);
+  const output=document.getElementById('noteSummary_'+index);
+  if(!btn||!output)return;
+  const notes=loadNotesForSite(label);
+  if(!notes.length)return;
+  btn.textContent='🔨 Foreman is reading the notes...';btn.style.opacity='0.5';btn.disabled=true;output.style.display='none';
+  const notesText=notes.map(n=>n.date+': '+n.text).join('\n');
+  const userName=localStorage.getItem('jw_user_name')||'Boss';
+  const trade=localStorage.getItem('jw_trade')||'general';
+  const tradeName=TRADE_CONFIG[trade]?.name||'General Contractor';
+  const systemPrompt='You are a seasoned jobsite foreman with 30 years in the trades working for StrickerCo Solutions. You are reviewing job site notes for '+userName+', a '+tradeName+'.\n\nSummarize these notes in plain English — weather patterns, recurring issues, best working windows, notable delays, and the overall site weather story so far. Be specific, use the dates. Keep it under 100 words. Sound like a foreman talking to another foreman, not a report.\n\nJob site: '+label+'\nNotes:\n'+notesText;
+  try{
+    const r=await fetch('/api/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Summarize the weather and site conditions history for '+label+' based on these notes.',systemPrompt})});
+    const data=await r.json();
+    output.textContent=data.answer||'Could not generate summary right now.';
+    output.style.display='block';btn.textContent='🔨 REFRESH SUMMARY';btn.style.opacity='1';btn.disabled=false;
+  }catch(e){
+    output.textContent="Foreman's off the grid. Try again.";output.style.display='block';
+    btn.textContent='🔨 ASK THE FOREMAN — SUMMARIZE NOTES';btn.style.opacity='1';btn.disabled=false;
+  }
 }
 
 // ── TIER UPGRADE FUNCTIONS ────────────────────────────────

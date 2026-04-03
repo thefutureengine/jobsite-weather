@@ -164,6 +164,7 @@ renderFounderBadge();
 updateProjectPill();
 showTrialToast();
 handleAuthCallback();
+if(typeof handleCrewInviteCallback==='function')handleCrewInviteCallback();
 
 
 // ── SWIPE GESTURES ────────────────────────────────────────

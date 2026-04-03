@@ -14,9 +14,11 @@ function openSettings(){
     <button class="modal-close" onclick="closeSettings()">✕</button>
     <div style="padding:0 4px">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px">⚙ SETTINGS</div>
-      ${isFounder?`<div style="background:var(--surface3);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--accent);letter-spacing:0.06em;margin-bottom:4px;display:flex;align-items:center;gap:6px"><svg width="12" height="15" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg> FOUNDING CREW MEMBER</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.6">You're in early. When Crew Mode launches, it's yours — on us.<br><span style="color:var(--subtle)">That's the way we do things. 🔨</span></div>
+      ${isFounder?`<div style="background:var(--surface3);border:1px solid rgba(245,166,35,0.2);border-radius:var(--radius);padding:16px;margin-bottom:16px;text-align:center">
+        <div style="margin-bottom:8px"><svg width="80" height="100" viewBox="0 0 140 165" xmlns="http://www.w3.org/2000/svg"><path d="M70 8 L125 32 L125 86 Q125 120 70 142 Q15 120 15 86 L15 32 Z" fill="#0a1520" stroke="#f5a623" stroke-width="4"/><path d="M70 20 L115 42 L115 84 Q115 112 70 130 Q25 112 25 84 L25 42 Z" fill="none" stroke="#f5a623" stroke-width="1" opacity="0.3"/></svg></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;color:#f5a623;letter-spacing:0.06em;margin-bottom:4px">FOUNDING CREW MEMBER</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:4px">You're in early. When Crew Plan launches,<br>Year 1 is on us.</div>
+        <div style="font-size:11px;color:rgba(245,166,35,0.5);font-style:italic">That's the way we do things. 🔨</div>
       </div>`:''}
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600">Your name</div>
@@ -64,7 +66,7 @@ function openSettings(){
       </div>
       ${s.status==='pro'?`
         <div style="background:var(--surface3);border:1px solid var(--accent);border-left:3px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:12px">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">${isFounder?'<span style="display:inline-flex;align-items:center;gap:4px"><svg width="12" height="15" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg"><path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z" fill="#0a1520" stroke="#f5a623" stroke-width="6"/><polygon points="60,28 64,36 60,44 56,36" fill="#f5a623"/><text x="60" y="72" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="#f5a623" text-anchor="middle">F</text></svg> FOUNDING CREW · PRO</span>':'⭐ PRO — ACTIVE'}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">${isFounder?'FOUNDING CREW · PRO':'⭐ PRO — ACTIVE'}</div>
           ${['🔨 Ask the Foreman','📍 Saved locations','📝 Job site notes','🌅 Morning briefing',isFounder?'⭐ Crew Mode free at launch':''].filter(Boolean).map(f=>`<div style="font-size:12px;color:var(--muted);padding:2px 0">✓ ${f}</div>`).join('')}
         </div>
       `:s.status==='trial'?`

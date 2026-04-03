@@ -5,6 +5,7 @@ const PRECACHE = [
   '/manifest.json',
   '/css/app.css',
   '/js/auth.js',
+  '/js/crew.js',
   '/js/app.js',
   '/js/trial.js',
   '/js/weather.js',
