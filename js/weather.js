@@ -116,6 +116,15 @@ function renderAlerts(temp,windMph,precip,wmo,rh,hourly){
   clearAlert();
 }
 
+function workability(temp,windMph,precip,wmo,rh){
+  const a=getTradeAlerts(temp,windMph,precip,wmo,rh);
+  if(!a.length)return{l:'Good to go',d:'safe'};
+  if(a.some(x=>x.level==='danger'))return{l:'Halt work',d:'danger'};
+  return{l:'Use caution',d:'caution'};
+}
+function windRisk(mph){if(mph<15)return{l:'Calm',d:'safe'};if(mph<30)return{l:'Breezy',d:'safe'};if(mph<45)return{l:'Windy',d:'caution'};return{l:'High winds',d:'danger'};}
+function heatRisk(hi){if(hi>=105)return{l:'Extreme',d:'danger'};if(hi>=95)return{l:'Caution',d:'caution'};return{l:'Normal',d:'safe'};}
+
 // ── RENDER CONDITIONS ─────────────────────────────────────
 function renderConditions(el){
   const c=currentData.current;
