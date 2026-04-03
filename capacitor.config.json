@@ -1,0 +1,8 @@
+{
+  "appId": "com.strickercosolutions.jobsiteweather",
+  "appName": "JobSite Weather",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
