@@ -303,7 +303,7 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
 .jw-toast.out{animation:toastOut 0.3s ease forwards;}
 .jw-toast .toast-accent{color:var(--accent);font-weight:600;}
 
-#tradeSelect{appearance:auto;-webkit-appearance:auto;}
+#tradeSelect,select{-webkit-appearance:auto;appearance:auto;}
 
 /* ── PROJECT MODE DATA ── */
 .pm-data-value{font-family:'Inter',sans-serif;font-weight:700;color:var(--text);}

@@ -221,20 +221,3 @@ if('serviceWorker' in navigator){
     catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP to get started.</div>';}
   }
 })();
-
-
-(async()=>{
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(
-      async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
-      async()=>{
-        try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-        catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code or tap GPS to get started.</div>';}
-      }
-    );
-  } else {
-    document.getElementById('locInput').value='Glasgow, MO';
-    try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-    catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a city or ZIP to get started.</div>';}
-  }
-})();
