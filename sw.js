@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jobsite-wx-v6';
+const CACHE_NAME = 'jobsite-wx-v9';
 const PRECACHE = [
   '/',
   '/index.html',
@@ -24,11 +24,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always go network-first for API calls and serverless functions
-  if (url.hostname !== location.hostname || url.pathname.startsWith('/.netlify/') || url.pathname.startsWith('/api/')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
+  // Let browser handle cross-origin requests natively — no SW interception
+  if (url.hostname !== location.hostname || url.pathname.startsWith('/.netlify/')) {
     return;
   }
 
