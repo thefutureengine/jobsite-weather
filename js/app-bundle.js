@@ -815,9 +815,9 @@ function renderConditions(el){
     <div class="section">
       <div class="sec-label">Next 10 hours</div>
       <div class="hourly-section">
-        ${window.matchMedia('(hover:none)').matches?'':`<button class="hourly-arrow left" id="hourlyLeft">‹</button>`}
+        <button class="hourly-arrow left" id="hourlyLeft">‹</button>
         <div class="hourly-wrap" id="hourlyScroll"><div class="hourly-inner">${hrHTML}</div></div>
-        ${window.matchMedia('(hover:none)').matches?'':`<button class="hourly-arrow right" id="hourlyRight">›</button>`}
+        <button class="hourly-arrow right" id="hourlyRight">›</button>
       </div>
       ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">${wwSummary}</div>`:''}
     </div>
