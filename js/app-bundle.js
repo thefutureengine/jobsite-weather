@@ -137,8 +137,8 @@ async function handleCrewInvite(){
 }
 // ── PRO / TRIAL / TIERS ───────────────────────────────────
 const STRIPE_PRO='https://buy.stripe.com/14AdR97f0h0E3op09IgUM05';
-const STRIPE_CREW='CREW_STRIPE_LINK_HERE';
-const STRIPE_PROJECT='PROJECT_STRIPE_LINK_HERE';
+const STRIPE_CREW='https://buy.stripe.com/dRmfZhgPAdOs8IJ9KigUM06';
+const STRIPE_PROJECT='https://buy.stripe.com/cNifZh0QC25K6ABcWugUM07';
 const STRIPE_LINK=STRIPE_PRO;
 const TRIAL_DAYS=30;
 
@@ -228,6 +228,18 @@ function showPaywall(feature){
     </div>`;
   navPush('modal');
   document.getElementById('dayModal').classList.add('open');
+}
+
+function checkCrewExpiry(){
+  const expires=localStorage.getItem('jw_crew_expires');
+  if(!expires)return;
+  if(localStorage.getItem('jw_crew_founding')!=='true')return;
+  if(Date.now()>parseInt(expires)){
+    localStorage.removeItem('jw_crew');localStorage.removeItem('jw_crew_expires');localStorage.removeItem('jw_crew_founding');
+    const nm=localStorage.getItem('jw_user_name')||'Boss';
+    showToast(`${nm} — your free Crew year is up. Upgrade to keep the crew together.`,5000);
+    if(typeof updateProjectPill==='function')updateProjectPill();
+  }
 }
 
 function activatePro(){
@@ -803,9 +815,9 @@ function renderConditions(el){
     <div class="section">
       <div class="sec-label">Next 10 hours</div>
       <div class="hourly-section">
-        <button class="hourly-arrow left" id="hourlyLeft">‹</button>
+        ${window.matchMedia('(hover:none)').matches?'':`<button class="hourly-arrow left" id="hourlyLeft">‹</button>`}
         <div class="hourly-wrap" id="hourlyScroll"><div class="hourly-inner">${hrHTML}</div></div>
-        <button class="hourly-arrow right" id="hourlyRight">›</button>
+        ${window.matchMedia('(hover:none)').matches?'':`<button class="hourly-arrow right" id="hourlyRight">›</button>`}
       </div>
       ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">${wwSummary}</div>`:''}
     </div>
@@ -1589,11 +1601,8 @@ function openSettings(){
           <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">You've wasted more than $4.99 waiting on weather that never came. Not anymore.</div>
         </div>
       `}
-      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.08em;margin-bottom:6px">🔨 CREW MODE — COMING SOON</div>
-        <div style="font-size:12px;color:var(--subtle);line-height:1.6">One account. Your whole crew. Share jobsite conditions and morning briefings with everyone on site.</div>
-        ${isFounder?'<div style="font-size:11px;color:var(--accent);margin-top:6px">Founding Crew members get Year 1 free.</div>':''}
-      </div>
+      ${localStorage.getItem('jw_crew_member')==='true'?`<div style="background:var(--surface3);border:1px solid rgba(76,175,80,0.3);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:rgba(76,175,80,0.8);letter-spacing:0.06em;margin-bottom:4px">👷 CREW MEMBER</div><div style="font-size:12px;color:var(--muted)">You're part of ${localStorage.getItem('jw_crew_owner')||'a crew'}.</div><div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px">Want your own crew? <a href="${STRIPE_CREW}" target="_blank" style="color:#f5a623;text-decoration:none">Upgrade to Crew Plan →</a></div></div>`:''}
+      ${isFounder&&localStorage.getItem('jw_crew')!=='true'?`<div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:var(--radius);padding:14px;margin-bottom:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:#f5a623;margin-bottom:6px">⭐ YOUR FOUNDING CREW BENEFIT</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Crew Plan is here. As a Founding Crew member your first year is on us.</div><button onclick="claimFoundingCrewBenefit()" style="width:100%;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:11px;border:none;border-radius:var(--radius-sm);cursor:pointer;letter-spacing:0.06em;">CLAIM FREE CREW YEAR →</button></div>`:''}
       ${s.status!=='pro'?`<div style="padding:12px 0;border-top:1px solid var(--border);margin-top:4px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Already paid on another device?</div>
         <div style="display:flex;gap:8px">
@@ -1605,6 +1614,19 @@ function openSettings(){
       <div style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px;margin-bottom:12px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Always free</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.8">✓ Current conditions & trade alerts<br>✓ 7-day forecast<br>✓ Hourly breakdown<br>✓ GPS & ZIP search<br>✓ Wind, UV, sunrise/sunset<br>✓ No ads. Ever.</div>
+      </div>
+      <div style="padding:14px 0;border-top:1px solid var(--border);margin-top:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">About</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.3);line-height:2">
+          <div>JobSite Weather · v1.1.0</div>
+          <div>Built by StrickerCo Solutions</div>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.2)">Data & attribution</div>
+          <div>Weather data: Open-Meteo (open-meteo.com)</div>
+          <div>Severe alerts: NOAA / National Weather Service</div>
+          <div>Extended forecast: Tomorrow.io</div>
+          <div>AI advisor: Anthropic Claude</div>
+          <div>Payments: Stripe</div>
+        </div>
       </div>
       <button class="btn" style="width:100%;padding:12px" onclick="saveSettings()">Save & Close</button>
     </div>`;
@@ -1653,6 +1675,20 @@ async function restorePro(){
   }catch(e){
     if(status)status.innerHTML='<span style="color:#ff6b6b">Could not verify. Check connection and try again.</span>';
   }
+}
+
+async function claimFoundingCrewBenefit(){
+  const email=localStorage.getItem('jw_auth_email')||localStorage.getItem('jw_restore_email');
+  if(!email){showToast('Sign in first to claim your benefit.',3000);return;}
+  try{
+    const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.success){
+      localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());localStorage.setItem('jw_crew_founding','true');localStorage.setItem('jw_crew_expires',(Date.now()+365*24*60*60*1000).toString());
+      if(sb){try{await sb.from('jw_crew_claims').upsert({email,claimed_at:new Date().toISOString(),expires_at:new Date(Date.now()+365*24*60*60*1000).toISOString(),founding:true});}catch(e){}}
+      closeSettingsSilent();history.back();showToast("Crew Year 1 claimed. That's the way we do things. 🔨",4000);updateProjectPill();
+    }else{showToast('Could not verify founding membership. Contact support.',3000);}
+  }catch(e){showToast('Could not connect. Try again.',3000);}
 }
 
 function closeSettingsOverlay(e){
@@ -1849,13 +1885,27 @@ function completeOnboarding(){
 // ── INIT ──────────────────────────────────────────────────
 showOnboarding();
 
-// Auto-activate Pro if returning from Stripe payment
-if(new URLSearchParams(window.location.search).get('pro')==='true'){
+// Auto-activate from Stripe payment return
+const _params=new URLSearchParams(window.location.search);
+if(_params.get('pro')==='true'){
   localStorage.setItem('jw_pro','true');
   if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
   window.history.replaceState({},'',window.location.pathname);
-  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();},500);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();updateProjectPill();},500);
 }
+if(_params.get('crew')==='true'){
+  localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());
+  window.history.replaceState({},'',window.location.pathname);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`Crew Plan activated, ${pn}. Your crew is ready. 🔨`,3000);updateProjectPill();},500);
+}
+if(_params.get('project')==='true'){
+  localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_project','true');localStorage.setItem('jw_project_activated',Date.now().toString());
+  window.history.replaceState({},'',window.location.pathname);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`Project Plan activated, ${pn}. Command center is live. 🔨`,3000);updateProjectPill();},500);
+}
+
+// Check crew expiry
+if(typeof checkCrewExpiry==='function')checkCrewExpiry();
 
 // Restore all persisted settings
 const savedTrade=localStorage.getItem('jw_trade');

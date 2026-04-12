@@ -145,13 +145,27 @@ function completeOnboarding(){
 // ── INIT ──────────────────────────────────────────────────
 showOnboarding();
 
-// Auto-activate Pro if returning from Stripe payment
-if(new URLSearchParams(window.location.search).get('pro')==='true'){
+// Auto-activate from Stripe payment return
+const _params=new URLSearchParams(window.location.search);
+if(_params.get('pro')==='true'){
   localStorage.setItem('jw_pro','true');
   if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
   window.history.replaceState({},'',window.location.pathname);
-  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();},500);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();updateProjectPill();},500);
 }
+if(_params.get('crew')==='true'){
+  localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());
+  window.history.replaceState({},'',window.location.pathname);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`Crew Plan activated, ${pn}. Your crew is ready. 🔨`,3000);updateProjectPill();},500);
+}
+if(_params.get('project')==='true'){
+  localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_project','true');localStorage.setItem('jw_project_activated',Date.now().toString());
+  window.history.replaceState({},'',window.location.pathname);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`Project Plan activated, ${pn}. Command center is live. 🔨`,3000);updateProjectPill();},500);
+}
+
+// Check crew expiry
+if(typeof checkCrewExpiry==='function')checkCrewExpiry();
 
 // Restore all persisted settings
 const savedTrade=localStorage.getItem('jw_trade');

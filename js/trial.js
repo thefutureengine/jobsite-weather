@@ -1,7 +1,7 @@
 // ── PRO / TRIAL / TIERS ───────────────────────────────────
 const STRIPE_PRO='https://buy.stripe.com/14AdR97f0h0E3op09IgUM05';
-const STRIPE_CREW='CREW_STRIPE_LINK_HERE';
-const STRIPE_PROJECT='PROJECT_STRIPE_LINK_HERE';
+const STRIPE_CREW='https://buy.stripe.com/dRmfZhgPAdOs8IJ9KigUM06';
+const STRIPE_PROJECT='https://buy.stripe.com/cNifZh0QC25K6ABcWugUM07';
 const STRIPE_LINK=STRIPE_PRO;
 const TRIAL_DAYS=30;
 
@@ -91,6 +91,18 @@ function showPaywall(feature){
     </div>`;
   navPush('modal');
   document.getElementById('dayModal').classList.add('open');
+}
+
+function checkCrewExpiry(){
+  const expires=localStorage.getItem('jw_crew_expires');
+  if(!expires)return;
+  if(localStorage.getItem('jw_crew_founding')!=='true')return;
+  if(Date.now()>parseInt(expires)){
+    localStorage.removeItem('jw_crew');localStorage.removeItem('jw_crew_expires');localStorage.removeItem('jw_crew_founding');
+    const nm=localStorage.getItem('jw_user_name')||'Boss';
+    showToast(`${nm} — your free Crew year is up. Upgrade to keep the crew together.`,5000);
+    if(typeof updateProjectPill==='function')updateProjectPill();
+  }
 }
 
 function activatePro(){

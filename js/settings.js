@@ -85,11 +85,8 @@ function openSettings(){
           <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">You've wasted more than $4.99 waiting on weather that never came. Not anymore.</div>
         </div>
       `}
-      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.08em;margin-bottom:6px">🔨 CREW MODE — COMING SOON</div>
-        <div style="font-size:12px;color:var(--subtle);line-height:1.6">One account. Your whole crew. Share jobsite conditions and morning briefings with everyone on site.</div>
-        ${isFounder?'<div style="font-size:11px;color:var(--accent);margin-top:6px">Founding Crew members get Year 1 free.</div>':''}
-      </div>
+      ${localStorage.getItem('jw_crew_member')==='true'?`<div style="background:var(--surface3);border:1px solid rgba(76,175,80,0.3);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:rgba(76,175,80,0.8);letter-spacing:0.06em;margin-bottom:4px">👷 CREW MEMBER</div><div style="font-size:12px;color:var(--muted)">You're part of ${localStorage.getItem('jw_crew_owner')||'a crew'}.</div><div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px">Want your own crew? <a href="${STRIPE_CREW}" target="_blank" style="color:#f5a623;text-decoration:none">Upgrade to Crew Plan →</a></div></div>`:''}
+      ${isFounder&&localStorage.getItem('jw_crew')!=='true'?`<div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:var(--radius);padding:14px;margin-bottom:12px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:#f5a623;margin-bottom:6px">⭐ YOUR FOUNDING CREW BENEFIT</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Crew Plan is here. As a Founding Crew member your first year is on us.</div><button onclick="claimFoundingCrewBenefit()" style="width:100%;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:11px;border:none;border-radius:var(--radius-sm);cursor:pointer;letter-spacing:0.06em;">CLAIM FREE CREW YEAR →</button></div>`:''}
       ${s.status!=='pro'?`<div style="padding:12px 0;border-top:1px solid var(--border);margin-top:4px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Already paid on another device?</div>
         <div style="display:flex;gap:8px">
@@ -101,6 +98,19 @@ function openSettings(){
       <div style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px;margin-bottom:12px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Always free</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.8">✓ Current conditions & trade alerts<br>✓ 7-day forecast<br>✓ Hourly breakdown<br>✓ GPS & ZIP search<br>✓ Wind, UV, sunrise/sunset<br>✓ No ads. Ever.</div>
+      </div>
+      <div style="padding:14px 0;border-top:1px solid var(--border);margin-top:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">About</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.3);line-height:2">
+          <div>JobSite Weather · v1.1.0</div>
+          <div>Built by StrickerCo Solutions</div>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.2)">Data & attribution</div>
+          <div>Weather data: Open-Meteo (open-meteo.com)</div>
+          <div>Severe alerts: NOAA / National Weather Service</div>
+          <div>Extended forecast: Tomorrow.io</div>
+          <div>AI advisor: Anthropic Claude</div>
+          <div>Payments: Stripe</div>
+        </div>
       </div>
       <button class="btn" style="width:100%;padding:12px" onclick="saveSettings()">Save & Close</button>
     </div>`;
@@ -149,6 +159,20 @@ async function restorePro(){
   }catch(e){
     if(status)status.innerHTML='<span style="color:#ff6b6b">Could not verify. Check connection and try again.</span>';
   }
+}
+
+async function claimFoundingCrewBenefit(){
+  const email=localStorage.getItem('jw_auth_email')||localStorage.getItem('jw_restore_email');
+  if(!email){showToast('Sign in first to claim your benefit.',3000);return;}
+  try{
+    const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.success){
+      localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());localStorage.setItem('jw_crew_founding','true');localStorage.setItem('jw_crew_expires',(Date.now()+365*24*60*60*1000).toString());
+      if(sb){try{await sb.from('jw_crew_claims').upsert({email,claimed_at:new Date().toISOString(),expires_at:new Date(Date.now()+365*24*60*60*1000).toISOString(),founding:true});}catch(e){}}
+      closeSettingsSilent();history.back();showToast("Crew Year 1 claimed. That's the way we do things. 🔨",4000);updateProjectPill();
+    }else{showToast('Could not verify founding membership. Contact support.',3000);}
+  }catch(e){showToast('Could not connect. Try again.',3000);}
 }
 
 function closeSettingsOverlay(e){
