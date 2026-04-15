@@ -1,6 +1,6 @@
 {
   "name": "JobSite Weather",
-  "short_name": "JobSite Wx",
+  "short_name": "JobSite Weather",
   "description": "Weather built for the trades. Trade-specific conditions, severe weather alerts, and jobsite safety ratings.",
   "start_url": "/",
   "display": "standalone",
