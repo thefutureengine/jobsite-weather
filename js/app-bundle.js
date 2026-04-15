@@ -814,11 +814,16 @@ function renderConditions(el){
     </div>
     <div class="section">
       <div class="sec-label">Next 10 hours</div>
-      <div class="hourly-section">
-        <button class="hourly-arrow left" id="hourlyLeft">‹</button>
+      ${(()=>{
+        const isTouchDevice=('ontouchstart' in window)||(navigator.maxTouchPoints>0)||(navigator.msMaxTouchPoints>0);
+        const arrowLeft=isTouchDevice?'':`<button class="hourly-arrow left" id="hourlyLeft">‹</button>`;
+        const arrowRight=isTouchDevice?'':`<button class="hourly-arrow right" id="hourlyRight">›</button>`;
+        return `<div class="hourly-section">
+        ${arrowLeft}
         <div class="hourly-wrap" id="hourlyScroll"><div class="hourly-inner">${hrHTML}</div></div>
-        <button class="hourly-arrow right" id="hourlyRight">›</button>
-      </div>
+        ${arrowRight}
+      </div>`;
+      })()}
       ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">${wwSummary}</div>`:''}
     </div>
   </div>`;
