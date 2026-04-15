@@ -14,11 +14,13 @@ async function generateCrewInvite(){
     const inviteCode=Math.random().toString(36).substring(2,10).toUpperCase();
     if(sb){
       const{data,error}=await sb.from('jw_crew_invites').insert({owner_email:ownerEmail,invite_code:inviteCode,accepted:false,created_at:new Date().toISOString()}).select().single();
+      console.log('Crew invite error:',error);
+      console.log('Crew invite data:',data);
       if(!error&&data){invites.push({code:inviteCode,id:data.id,accepted:false});saveCrewInvites(invites);return inviteCode;}
     }
     // Fallback — local only
     invites.push({code:inviteCode,accepted:false});saveCrewInvites(invites);return inviteCode;
-  }catch(e){return null;}
+  }catch(e){console.log('Crew invite exception:',e);return null;}
 }
 
 async function sendCrewMagicLink(email,inviteCode){
