@@ -70,7 +70,7 @@ function renderForemanTab(el){
   const remaining=getRemainingForeman();
   const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
   el.innerHTML=`<div class="fade-in" style="padding:20px 16px">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px">🔨 ASK THE FOREMAN</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px">👷 ASK THE FOREMAN</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Hey ${name}, what do you need to know?</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
       ${chips.map(c=>{const safe=c.replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');return`<div class="foreman-chip" onclick="submitForemanQuestion(&quot;${safe}&quot;)">${c}</div>`;}).join('')}

@@ -270,7 +270,14 @@ function renderFounderBadge(){
   badge.id='founderTopBadge';
   badge.style.cssText='display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle;cursor:default;';
   badge.title='Founder · Set the Standard';
-  badge.innerHTML=`<svg width="18" height="22" viewBox="0 0 140 165" xmlns="http://www.w3.org/2000/svg"><path d="M70 8 L125 32 L125 86 Q125 120 70 142 Q15 120 15 86 L15 32 Z" fill="#0a1520" stroke="#f5a623" stroke-width="5"/><path d="M70 20 L115 42 L115 84 Q115 112 70 130 Q25 112 25 84 L25 42 Z" fill="none" stroke="#f5a623" stroke-width="1.5" opacity="0.3"/></svg>`;
+  badge.innerHTML=`
+<svg width="28" height="34" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg" title="Founder · Set the Standard">
+  <path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z"
+    fill="#0a1520" stroke="#f5a623" stroke-width="5"/>
+  <path d="M60 18 L104 38 L104 74 Q104 98 60 116 Q16 98 16 74 L16 38 Z"
+    fill="none" stroke="#f5a623" stroke-width="1" opacity="0.35"/>
+  <polygon points="60,32 64,40 60,48 56,40" fill="#f5a623" opacity="0.9"/>
+</svg>`;
   logoDiv.appendChild(badge);
 }
 
@@ -824,7 +831,7 @@ function renderConditions(el){
         ${arrowRight}
       </div>`;
       })()}
-      ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">${wwSummary}</div>`:''}
+      ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">👷 ${wwSummary}</div>`:''}
     </div>
   </div>`;
 
@@ -1120,7 +1127,7 @@ function renderForemanTab(el){
   const remaining=getRemainingForeman();
   const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
   el.innerHTML=`<div class="fade-in" style="padding:20px 16px">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px">🔨 ASK THE FOREMAN</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px">👷 ASK THE FOREMAN</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Hey ${name}, what do you need to know?</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
       ${chips.map(c=>{const safe=c.replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');return`<div class="foreman-chip" onclick="submitForemanQuestion(&quot;${safe}&quot;)">${c}</div>`;}).join('')}

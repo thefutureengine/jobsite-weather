@@ -341,7 +341,7 @@ function renderConditions(el){
         ${arrowRight}
       </div>`;
       })()}
-      ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">${wwSummary}</div>`:''}
+      ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">👷 ${wwSummary}</div>`:''}
     </div>
   </div>`;
 
