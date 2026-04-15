@@ -151,7 +151,7 @@ if(_params.get('pro')==='true'){
   localStorage.setItem('jw_pro','true');
   if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
   window.history.replaceState({},'',window.location.pathname);
-  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();updateProjectPill();},500);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);updateProjectPill();},500);
 }
 if(_params.get('crew')==='true'){
   localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());
@@ -173,7 +173,6 @@ if(savedTrade){currentTrade=savedTrade;const ts=document.getElementById('tradeSe
 if(!Array.isArray(savedLocs))savedLocs=[];
 
 renderLocs();
-renderFounderBadge();
 updateProjectPill();
 showTrialToast();
 handleAuthCallback();

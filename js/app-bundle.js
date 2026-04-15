@@ -263,22 +263,6 @@ async function geoSearch(q){
 function renderFounderBadge(){
   const existing=document.getElementById('founderTopBadge');
   if(existing)existing.remove();
-  if(localStorage.getItem('jw_founding_crew')!=='true')return;
-  const logoDiv=document.querySelector('.topbar .logo');
-  if(!logoDiv)return;
-  const badge=document.createElement('div');
-  badge.id='founderTopBadge';
-  badge.style.cssText='display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle;cursor:default;';
-  badge.title='Founder · Set the Standard';
-  badge.innerHTML=`
-<svg width="28" height="34" viewBox="0 0 120 134" xmlns="http://www.w3.org/2000/svg" title="Founder · Set the Standard">
-  <path d="M60 6 L112 28 L112 76 Q112 108 60 128 Q8 108 8 76 L8 28 Z"
-    fill="#0a1520" stroke="#f5a623" stroke-width="5"/>
-  <path d="M60 18 L104 38 L104 74 Q104 98 60 116 Q16 98 16 74 L16 38 Z"
-    fill="none" stroke="#f5a623" stroke-width="1" opacity="0.35"/>
-  <polygon points="60,32 64,40 60,48 56,40" fill="#f5a623" opacity="0.9"/>
-</svg>`;
-  logoDiv.appendChild(badge);
 }
 
 function renderLocs(){
@@ -1680,7 +1664,7 @@ async function restorePro(){
       localStorage.setItem('jw_pro','true');
       if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
       if(status)status.innerHTML='<span style="color:var(--safe)">✓ Pro restored. Welcome back. 🔨</span>';
-      setTimeout(()=>{closeSettingsSilent();history.back();renderLocs();renderFounderBadge();if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));},1500);
+      setTimeout(()=>{closeSettingsSilent();history.back();renderLocs();if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));},1500);
     } else {
       if(status)status.innerHTML=`<span style="color:#ff6b6b">${data.message||'Not found.'}</span>`;
     }
@@ -1903,7 +1887,7 @@ if(_params.get('pro')==='true'){
   localStorage.setItem('jw_pro','true');
   if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
   window.history.replaceState({},'',window.location.pathname);
-  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);renderFounderBadge();updateProjectPill();},500);
+  setTimeout(()=>{const pn=localStorage.getItem('jw_user_name')||'Boss';showToast(`You're in, ${pn}. Go make some money. 🔨`,3000);updateProjectPill();},500);
 }
 if(_params.get('crew')==='true'){
   localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());
@@ -1925,7 +1909,6 @@ if(savedTrade){currentTrade=savedTrade;const ts=document.getElementById('tradeSe
 if(!Array.isArray(savedLocs))savedLocs=[];
 
 renderLocs();
-renderFounderBadge();
 updateProjectPill();
 showTrialToast();
 handleAuthCallback();

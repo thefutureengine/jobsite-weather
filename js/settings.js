@@ -152,7 +152,7 @@ async function restorePro(){
       localStorage.setItem('jw_pro','true');
       if(!localStorage.getItem('jw_founding_crew'))localStorage.setItem('jw_founding_crew','true');
       if(status)status.innerHTML='<span style="color:var(--safe)">✓ Pro restored. Welcome back. 🔨</span>';
-      setTimeout(()=>{closeSettingsSilent();history.back();renderLocs();renderFounderBadge();if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));},1500);
+      setTimeout(()=>{closeSettingsSilent();history.back();renderLocs();if(currentData&&activeTab==='conditions')renderConditions(document.getElementById('content'));},1500);
     } else {
       if(status)status.innerHTML=`<span style="color:#ff6b6b">${data.message||'Not found.'}</span>`;
     }
