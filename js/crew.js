@@ -26,7 +26,13 @@ async function generateCrewInvite(){
 async function sendCrewMagicLink(email,inviteCode){
   if(!sb)return false;
   try{
-    const{error}=await sb.auth.signInWithOtp({email:email.trim().toLowerCase(),options:{emailRedirectTo:window.location.origin+'?crew_invite='+inviteCode,data:{crew_invite:inviteCode}}});
+    const{error}=await sb.auth.signInWithOtp({
+      email:email.trim().toLowerCase(),
+      options:{
+        emailRedirectTo:`${window.location.origin}?crew_invite=${inviteCode}`,
+        data:{crew_invite:inviteCode}
+      }
+    });
     return!error;
   }catch(e){return false;}
 }
