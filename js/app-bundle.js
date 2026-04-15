@@ -1633,8 +1633,6 @@ function openSettings(){
 
 function saveSettings(){
   const name=(document.getElementById('settingsName')?.value||'').trim()||'Boss';
-  // DEV ONLY — REMOVE BEFORE MERGE
-  if(name.toUpperCase()==='CREWPLAN'){localStorage.setItem('jw_crew','true');showToast('Crew Plan activated 🔨',2000);}
   const style=document.querySelector('input[name=sstyle]:checked')?.value||'shooter';
   const trade=document.getElementById('settingsTrade')?.value||'general';
   localStorage.setItem('jw_user_name',name);
@@ -1741,9 +1739,6 @@ const SUPABASE_URL='https://jfpyrlregzwmvltrhgfq.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmcHlybHJlZ3p3bXZsdHJoZ2ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzcyOTMsImV4cCI6MjA5MDgxMzI5M30.YDLYIk4n6X7mBYYpk5fkEe0MeS3KqrB4wDhcwmD5iKs';
 let sb=null;
 try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);console.log('[Supabase] Client initialized');}catch(e){console.warn('[Supabase] Init failed, running without:',e.message);}
-
-// DEV ONLY — REMOVE BEFORE MERGE TO MAIN
-localStorage.setItem('jw_pro','true');localStorage.setItem('jw_crew','true');localStorage.setItem('jw_project','true');localStorage.setItem('jw_founding_crew','true');localStorage.setItem('jw_trial_start',(Date.now()-(5*24*60*60*1000)).toString());
 
 // ── CONSTANTS ──────────────────────────────────────────────
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Severe storm'};

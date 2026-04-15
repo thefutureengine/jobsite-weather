@@ -119,8 +119,6 @@ function openSettings(){
 
 function saveSettings(){
   const name=(document.getElementById('settingsName')?.value||'').trim()||'Boss';
-  // DEV ONLY — REMOVE BEFORE MERGE
-  if(name.toUpperCase()==='CREWPLAN'){localStorage.setItem('jw_crew','true');showToast('Crew Plan activated 🔨',2000);}
   const style=document.querySelector('input[name=sstyle]:checked')?.value||'shooter';
   const trade=document.getElementById('settingsTrade')?.value||'general';
   localStorage.setItem('jw_user_name',name);
