@@ -81,6 +81,16 @@ async function loadProjectSites(){
   const siteData=await Promise.all(sites.map(async site=>{
     try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
   }));
+  // Store last checked + compute statuses for summary
+  const siteStatuses=siteData.map(s=>{
+    if(!s.weatherData)return'UNKNOWN';
+    const c=s.weatherData.current;const alerts=getTradeAlerts(Math.round(c.temperature_2m),Math.round(c.wind_speed_10m),c.precipitation||0,c.weather_code,Math.round(c.relative_humidity_2m));
+    localStorage.setItem('jw_site_checked_'+s.label,Date.now().toString());
+    return alerts.some(a=>a.level==='danger')?'HOLD':alerts.some(a=>a.level==='caution')?'CAUTION':'GO';
+  });
+  const goCount=siteStatuses.filter(s=>s==='GO').length,cautionCount=siteStatuses.filter(s=>s==='CAUTION').length,holdCount=siteStatuses.filter(s=>s==='HOLD').length;
+  const summaryParts=[];if(goCount)summaryParts.push(goCount+' site'+(goCount>1?'s':'')+' clear');if(cautionCount)summaryParts.push(cautionCount+' with caution flags');if(holdCount)summaryParts.push(holdCount+' with active weather issues');
+  content.innerHTML+=`<div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);padding:8px 16px 4px;letter-spacing:0.03em">${summaryParts.join(' · ')}</div>`;
   siteData.forEach((site,i)=>{content.innerHTML+=buildSiteCard(site,i);});
   content.innerHTML+='<div style="height:20px"></div>';
 }
@@ -104,7 +114,7 @@ function buildSiteCard(site,index){
   return`<div id="pmCard_${index}" style="margin:10px 16px;background:var(--surface3);border:1px solid ${borderColor};border-radius:var(--radius);overflow:hidden">
     <div onclick="toggleSiteCard(${index})" style="padding:14px;cursor:pointer;display:flex;align-items:center;gap:12px">
       <div class="pm-status-dot" style="background:${statusColor}"></div>
-      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${site.projectName||site.label}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${site.label}${site.trade?' · '+(TRADE_CONFIG[site.trade]?.name||site.trade):''}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${site.projectName||site.label}${(()=>{const n=typeof loadNotesForSite==='function'?loadNotesForSite(site.label).length:0;return n?`<span style="font-size:10px;color:rgba(245,166,35,0.6);margin-left:6px">${n} note${n>1?'s':''}</span>`:''})()}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${site.label}${site.trade?' · '+(TRADE_CONFIG[site.trade]?.name||site.trade):''} · <span style="font-size:9px;color:rgba(255,255,255,0.2)">${(()=>{const lc=localStorage.getItem('jw_site_checked_'+site.label);if(!lc)return'not checked';const m=Math.round((Date.now()-parseInt(lc))/60000);return m<60?m+'m ago':Math.round(m/60)+'h ago';})()}</span></div></div>
       <div style="text-align:right;flex-shrink:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:${statusColor}">${status}</div><div class="pm-data-label">${temp}°F · ${wind}mph</div></div>
       <div style="color:rgba(255,255,255,0.2);font-size:14px;flex-shrink:0" id="pmChevron_${index}">▼</div>
     </div>

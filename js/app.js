@@ -210,10 +210,22 @@ if('serviceWorker' in navigator){
 }
 
 (async()=>{
-  // Try restoring last location first
   const lastLat=localStorage.getItem('jw_last_lat');
   const lastLon=localStorage.getItem('jw_last_lon');
   const lastLabel=localStorage.getItem('jw_last_label');
+  const lastData=localStorage.getItem('jw_last_data');
+  // Phase 1 — render from cache instantly
+  if(lastLat&&lastLon&&lastLabel&&lastData){
+    try{
+      currentData=JSON.parse(lastData);currentLat=parseFloat(lastLat);currentLon=parseFloat(lastLon);currentLabel=lastLabel;
+      document.getElementById('navTabs').style.display='flex';
+      renderCurrentTab();renderLocs();
+    }catch(e){}
+    // Phase 2 — refresh in background
+    loadByLatLon(parseFloat(lastLat),parseFloat(lastLon),lastLabel);
+    return;
+  }
+  // No cached data — try restoring location without cache
   if(lastLat&&lastLon&&lastLabel){
     await loadByLatLon(parseFloat(lastLat),parseFloat(lastLon),lastLabel);
     return;

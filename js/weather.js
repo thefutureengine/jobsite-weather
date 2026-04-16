@@ -87,7 +87,7 @@ function getWorkabilityAllClear(){
 
 // ── API ────────────────────────────────────────────────────
 async function fetchWx(lat,lon){
-  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation,snowfall&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,precipitation_sum,snowfall_sum&wind_speed_unit=kmh&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7`;
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation,snowfall,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,precipitation_sum,snowfall_sum&wind_speed_unit=kmh&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7`;
   console.log('[fetchWx] Fetching:',lat,lon);
   try{
     const r=await fetch(u);
@@ -244,8 +244,11 @@ function renderConditions(el){
     wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i])),
     rh:Math.round(currentData.hourly.relative_humidity_2m[i]||rh),
     precip:currentData.hourly.precipitation?.[i]||0,
-    snow:currentData.hourly.snowfall?.[i]||0
+    snow:currentData.hourly.snowfall?.[i]||0,
+    uv:Math.round(currentData.hourly.uv_index?.[i]||0)
   })).filter(h=>h.t>=now2).slice(0,10);
+  const sunriseTime=currentData.daily.sunrise?.[0]?new Date(currentData.daily.sunrise[0]):null;
+  const sunsetTime=currentData.daily.sunset?.[0]?new Date(currentData.daily.sunset[0]):null;
 
   renderAlerts(temp,windMph,precip,wmo,rh,hourly);
 
@@ -261,31 +264,36 @@ function renderConditions(el){
     const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
     const precipLine=h.snow>0.01?`<div class="hr-pct" style="color:#a8d8ff">${h.snow.toFixed(2)}"❄️</div>`:h.precip>0.01?`<div class="hr-pct">${h.precip.toFixed(2)}"</div>`:h.prob>15?`<div class="hr-pct">${h.prob}%</div>`:'<div class="hr-pct" style="opacity:0">·</div>';
     const statusDot=`<div class="dot ${dotClass(hrStatuses[i])}" style="margin:0 auto 4px"></div>`;
-    return`<div class="hr-item ${cls}">${statusDot}<div class="hr-time">${fmt}</div><div class="hr-ico">${ICO[h.wmo]||'☁️'}</div><div class="hr-tmp">${h.temp}°</div>${precipLine}<div class="hr-wind">${h.wind}mph</div></div>`;
+    const isDaylight=sunriseTime&&sunsetTime&&h.t>sunriseTime&&h.t<sunsetTime;
+    const uvLine=isDaylight&&h.uv>0?`<div style="font-size:9px;color:${h.uv<=2?'rgba(255,255,255,0.4)':h.uv<=5?'#f5a623':h.uv<=7?'#ff9800':'#e53935'}">UV ${h.uv}</div>`:'';
+    return`<div class="hr-item ${cls}">${statusDot}<div class="hr-time">${fmt}</div><div class="hr-ico">${ICO[h.wmo]||'☁️'}</div><div class="hr-tmp">${h.temp}°</div>${precipLine}<div class="hr-wind">${h.wind}mph</div>${uvLine}</div>`;
   }).join('');
 
-  // Workability summary line
+  // Workability 10hr lookahead
   const firstBad=hrStatuses.findIndex(s=>s==='danger');
   const firstGood=hrStatuses.findIndex(s=>s==='safe');
   const allGood=hrStatuses.every(s=>s==='safe');
   const allBad=hrStatuses.every(s=>s==='danger');
-  const userName=localStorage.getItem('jw_user_name')||'Boss';
-  let wwSummary='';
-  const goodLines=[
-    `Clean day ahead, ${userName}. Go make some money.`,
-    `No excuses today, ${userName}. The way you do one thing is the way you do everything.`,
-    `${userName} — clear all day. Set the standard.`,
-    `Conditions are dialed in, ${userName}. No one's coming to save the bid — go get it.`
-  ];
-  if(allGood)wwSummary=goodLines[new Date().getDate()%goodLines.length];
-  else if(allBad)wwSummary=`Not today, ${userName}. Button it up and live to fight another day.`;
-  else if(firstBad===0&&firstGood>0){
+  const userName=localStorage.getItem('jw_user_name')||'';
+  // Check upcoming rain probability
+  const firstHighRain=hourly.find(h=>h.prob>50);
+  const upcomingRainMsg=firstHighRain?`${firstHighRain.prob}% rain chance in ${Math.max(1,Math.round((firstHighRain.t-now2)/3600000))} hr${Math.round((firstHighRain.t-now2)/3600000)!==1?'s':''}`:'';
+  let wwSummary='',wwSecondary='';
+  if(allGood&&!upcomingRainMsg){
+    const clearLines=[`${temp}°F, winds ${windMph}mph, ${rainPct}% rain chance. Clean conditions.`,'No weather flags in the next 10 hours.','The way you do one thing is the way you do everything. Conditions are set.',`${temp}°F and clear. Wind at ${windMph}mph.`];
+    wwSummary=clearLines[new Date().getDate()%clearLines.length];
+  }else if(allGood&&upcomingRainMsg){
+    wwSummary=`Clear right now. ${upcomingRainMsg} in the forecast.`;
+  }else if(allBad){
+    wwSummary=`Active weather across the 10-hour window. ${hourly[0]?getTradeAlerts(hourly[0].temp,hourly[0].wind,hourly[0].precip,hourly[0].wmo,hourly[0].rh)[0]?.msg||'':''}`;
+  }else if(firstBad===0&&firstGood>0){
     const t=hourly[firstGood].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-    wwSummary=`Rough start, ${userName}. Window opens around ${t}. Be ready.`;
-  } else if(firstBad>0){
+    wwSummary=`Conditions improve around ${t}.`;
+  }else if(firstBad>0){
     const t=hourly[firstBad].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-    wwSummary=`Good window now, ${userName}. Conditions turn around ${t} — plan your move.`;
-  } else wwSummary=`Mixed day, ${userName}. Adapt and get after it.`;
+    wwSummary=`Clear now. Conditions change around ${t}.`;
+  }else{wwSummary='Mixed conditions across the 10-hour window.';}
+  if(upcomingRainMsg&&!allGood)wwSecondary=upcomingRainMsg;
 
   el.innerHTML=`<div class="fade-in">
     <div class="hero">
@@ -342,6 +350,7 @@ function renderConditions(el){
       </div>`;
       })()}
       ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">👷 ${wwSummary}</div>`:''}
+      ${wwSecondary?`<div style="font-size:11px;color:var(--subtle);margin-top:4px">⚠ ${wwSecondary}</div>`:''}
     </div>
   </div>`;
 

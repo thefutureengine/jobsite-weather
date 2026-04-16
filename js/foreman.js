@@ -36,17 +36,19 @@ function buildConditionsContext(){
     wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i])),
     prob:currentData.hourly.precipitation_probability[i]||0,
     precip:currentData.hourly.precipitation?.[i]||0,
-    wmo:currentData.hourly.weather_code[i]
+    wmo:currentData.hourly.weather_code[i],
+    uv:Math.round(currentData.hourly.uv_index?.[i]||0)
   })).filter(h=>h.t>=now).slice(0,12).map(h=>{
     const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
-    return`${fmt}: ${h.temp}°F wind ${h.wind}mph rain ${h.prob}%${h.precip>0.01?' ('+h.precip.toFixed(2)+'")':''}`;
+    return`${fmt}: ${h.temp}°F wind ${h.wind}mph rain ${h.prob}%${h.precip>0.01?' ('+h.precip.toFixed(2)+'")':''} UV ${h.uv}`;
   }).join(' | ');
   const firstRain=currentData.hourly.time.map((t,i)=>({
     t:new Date(t),prob:currentData.hourly.precipitation_probability[i]||0,
     wmo:currentData.hourly.weather_code[i]
   })).filter(h=>h.t>=now).find(h=>h.prob>40||DANGER.has(h.wmo)||WARN.has(h.wmo));
   const rainWarning=firstRain?`First significant rain expected around ${firstRain.t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true})}`:'No significant rain in next 12 hours';
-  return`Location: ${currentLabel}. Time: ${timeStr} (${dayPart}). Sunrise: ${sunriseStr}, Sunset: ${sunsetStr}.\nCurrent: ${temp}°F, Wind: ${wind}mph ${windDirLabel(c.wind_direction_10m||0)}, Humidity: ${rh}%, Conditions: ${WMO[wmo]||'Unknown'}.\nRain today: ${rainPct}%. ${rainWarning}.\nTrade: ${TRADE_CONFIG[currentTrade]?.name||'General'}.\nActive alerts: ${alerts.map(a=>a.msg).join(', ')||'None'}.\nNext 12 hours: ${hourlyForecast}`;
+  const currentUV=Math.round(c.uv_index||0);
+  return`Location: ${currentLabel}. Time: ${timeStr} (${dayPart}). Sunrise: ${sunriseStr}, Sunset: ${sunsetStr}.\nCurrent: ${temp}°F, Wind: ${wind}mph ${windDirLabel(c.wind_direction_10m||0)}, Humidity: ${rh}%, UV Index: ${currentUV}, Conditions: ${WMO[wmo]||'Unknown'}.\nRain today: ${rainPct}%. ${rainWarning}.\nTrade: ${TRADE_CONFIG[currentTrade]?.name||'General'}.\nActive alerts: ${alerts.map(a=>a.msg).join(', ')||'None'}.\nNext 12 hours: ${hourlyForecast}`;
 }
 
 function getRemainingForeman(){
