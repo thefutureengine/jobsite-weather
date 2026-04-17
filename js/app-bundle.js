@@ -839,7 +839,6 @@ function renderConditions(el){
       </div>`;
       })()}
       ${wwSummary?`<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px">👷 ${wwSummary}</div>`:''}
-      ${wwSecondary?`<div style="font-size:11px;color:var(--subtle);margin-top:4px">⚠ ${wwSecondary}</div>`:''}
     </div>
   </div>`;
 
