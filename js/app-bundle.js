@@ -986,9 +986,10 @@ function getWindTradeNote(mph){
 }
 
 // ── DAY MODAL ─────────────────────────────────────────────
-function openDayModal(dayIndex){
+function openDayModal(dayIndex,skipNav){
   if(!currentData)return;
-  navPush('modal');
+  currentDayIndex=dayIndex;
+  if(!skipNav)navPush('modal');
   const daily=currentData.daily;
   const t=daily.time[dayIndex];
   const d=new Date(t+'T12:00:00');
@@ -1059,9 +1060,38 @@ function openDayModal(dayIndex){
 function closeModal(e){if(e.target===document.getElementById('dayModal'))closeModalBtn();}
 function closeModalBtn(){
   if(!document.getElementById('dayModal').classList.contains('open'))return;
+  const wasDayModal=currentDayIndex!==null;
+  currentDayIndex=null;
   document.getElementById('dayModal').classList.remove('open');
+  if(wasDayModal)switchTab('forecast');
   history.back();
 }
+
+function navigateDayModal(direction){
+  if(currentDayIndex===null)return;
+  const newIndex=currentDayIndex+direction;
+  const maxIndex=(currentData?.daily?.time?.length||7)-1;
+  if(newIndex<0||newIndex>maxIndex)return;
+  openDayModal(newIndex,true);
+}
+
+(function initDayModalSwipe(){
+  const modal=document.getElementById('dayModal');
+  if(!modal)return;
+  let swipeStartX=0,swipeStartY=0;
+  modal.addEventListener('touchstart',e=>{
+    swipeStartX=e.touches[0].clientX;
+    swipeStartY=e.touches[0].clientY;
+  },{passive:true});
+  modal.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-swipeStartX;
+    const dy=e.changedTouches[0].clientY-swipeStartY;
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)*0.5)return;
+    if(dx<0)navigateDayModal(1);
+    else navigateDayModal(-1);
+  },{passive:true});
+})();
+
 // ── FOREMAN TAB ──────────────────────────────────────────
 
 const FOREMAN_CHIPS={
@@ -1802,6 +1832,7 @@ let savedLocs=JSON.parse(localStorage.getItem('jw_locs')||'[]');
 let activeLoc=null,currentTrade='general',nwsAlerts=[];
 let activeTab='conditions';
 let tomorrowHourly=[];
+let currentDayIndex=null;
 let notifySettings=JSON.parse(localStorage.getItem('jw_notify')||'{"severe":true,"wind":false,"rain":false}');
 
 // ── UTILS ──────────────────────────────────────────────────
@@ -1832,7 +1863,10 @@ window.addEventListener('popstate',()=>{
   } else if(document.getElementById('foremanModal').classList.contains('open')){
     closeForemanSilent();
   } else if(document.getElementById('dayModal').classList.contains('open')){
+    const wasDayModal=currentDayIndex!==null;
+    currentDayIndex=null;
     document.getElementById('dayModal').classList.remove('open');
+    if(wasDayModal)switchTab('forecast');
   } else if(document.getElementById('settingsModal').classList.contains('open')){
     closeSettingsSilent();
   } else if(activeTab!=='conditions'){
