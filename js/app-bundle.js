@@ -74,13 +74,11 @@ async function generateCrewInvite(){
     const inviteCode=Math.random().toString(36).substring(2,10).toUpperCase();
     if(sb){
       const{data,error}=await sb.from('jw_crew_invites').insert({owner_email:ownerEmail,invite_code:inviteCode,accepted:false,created_at:new Date().toISOString()}).select().single();
-      console.log('Crew invite error:',error);
-      console.log('Crew invite data:',data);
       if(!error&&data){invites.push({code:inviteCode,id:data.id,accepted:false});saveCrewInvites(invites);return inviteCode;}
     }
     // Fallback — local only
     invites.push({code:inviteCode,accepted:false});saveCrewInvites(invites);return inviteCode;
-  }catch(e){console.log('Crew invite exception:',e);return null;}
+  }catch(e){return null;}
 }
 
 async function sendCrewMagicLink(email,inviteCode){
@@ -361,8 +359,7 @@ async function loadByLatLon(lat,lon,label){
     data._lat=lat;data._lon=lon;
     nwsAlerts=alerts;
     currentData=data;currentLabel=label;
-    localStorage.setItem('jw_last_lat',lat.toString());localStorage.setItem('jw_last_lon',lon.toString());localStorage.setItem('jw_last_label',label);
-    try{localStorage.setItem('jw_last_data',JSON.stringify(data));}catch(e){}
+    localStorage.setItem('jw_last_lat',lat);localStorage.setItem('jw_last_lon',lon);localStorage.setItem('jw_last_label',label);try{localStorage.setItem('jw_last_data',JSON.stringify(data));}catch(e){}
     document.getElementById('navTabs').style.display='flex';
     renderNWSAlerts(alerts);
     renderCurrentTab();
@@ -488,12 +485,12 @@ function getTradeAlerts(temp,windMph,precip,wmo,rh){
   const hi=heatIdx(temp,rh);
   const isStorm=DANGER.has(wmo);
   const isRain=WARN.has(wmo)||precip>0.1;
-  if(isStorm)return[{level:'danger',msg:"Sky's throwing a fit. Get off the jobsite, it's not worth it."}];
+  if(isStorm)alerts.push({level:'danger',msg:`${WMO[wmo]||'Severe weather'} in the forecast.`});
   const wd=trade.windDanger||45,wc=trade.windCaution||25;
   if(currentTrade==='roofing'){
     if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — the roof isn't going anywhere. You might be.`});
     else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph gusting up there. Hold your felt and your hat.`});
-    if(isRain)alerts.push({level:'danger',msg:'Wet roof. Gravity wins every time. Call it.'});
+    if(isRain)alerts.push({level:'danger',msg:'Wet roof conditions. Precipitation active.'});
   }else if(currentTrade==='concrete'){
     if(temp<40)alerts.push({level:'danger',msg:`${temp}°F — concrete cures slower than your Monday morning crew.`});
     else if(temp<50)alerts.push({level:'caution',msg:`${temp}°F — she'll cure, just not on your schedule. Use cold-weather mix.`});
@@ -553,7 +550,7 @@ function getTradeAlerts(temp,windMph,precip,wmo,rh){
     if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — debris control required. Wind is a hazard.`});
     if(isRain||precip>0.3)alerts.push({level:'caution',msg:'Rain — dust suppression active, mud hazard on site.'});
   }else{
-    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — secure everything that can move and get off elevated work.`});
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph}mph sustained winds. Elevated and overhead work affected.`});
     else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — tie down your materials. Wind doesn't care about your bid sheet.`});
     if(isRain)alerts.push({level:'caution',msg:`${WMO[wmo]||'Rain'} moving through. Keep an eye on it.`});
   }
@@ -596,7 +593,11 @@ async function fetchNWSAlerts(lat,lon){
 
 async function fetchTomorrowForecast(lat,lon){
   try{
-    const r=await fetch(`https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lon}&apikey=${TOMORROW_KEY}`);
+    const r=await fetch('/.netlify/functions/storm-forecast',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lat,lon})
+    });
     const d=await r.json();
     return d.timelines?.hourly||[];
   }catch(e){return[];}
@@ -757,26 +758,31 @@ function renderConditions(el){
   const firstGood=hrStatuses.findIndex(s=>s==='safe');
   const allGood=hrStatuses.every(s=>s==='safe');
   const allBad=hrStatuses.every(s=>s==='danger');
-  const userName=localStorage.getItem('jw_user_name')||'';
-  // Check upcoming rain probability
-  const firstHighRain=hourly.find(h=>h.prob>50);
-  const upcomingRainMsg=firstHighRain?`${firstHighRain.prob}% rain chance in ${Math.max(1,Math.round((firstHighRain.t-now2)/3600000))} hr${Math.round((firstHighRain.t-now2)/3600000)!==1?'s':''}`:'';
-  let wwSummary='',wwSecondary='';
-  if(allGood&&!upcomingRainMsg){
-    const clearLines=[`${temp}°F, winds ${windMph}mph, ${rainPct}% rain chance. Clean conditions.`,'No weather flags in the next 10 hours.','The way you do one thing is the way you do everything. Conditions are set.',`${temp}°F and clear. Wind at ${windMph}mph.`];
-    wwSummary=clearLines[new Date().getDate()%clearLines.length];
-  }else if(allGood&&upcomingRainMsg){
-    wwSummary=`Clear right now. ${upcomingRainMsg} in the forecast.`;
-  }else if(allBad){
-    wwSummary=`Active weather across the 10-hour window. ${hourly[0]?getTradeAlerts(hourly[0].temp,hourly[0].wind,hourly[0].precip,hourly[0].wmo,hourly[0].rh)[0]?.msg||'':''}`;
-  }else if(firstBad===0&&firstGood>0){
-    const t=hourly[firstGood].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-    wwSummary=`Conditions improve around ${t}.`;
-  }else if(firstBad>0){
-    const t=hourly[firstBad].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-    wwSummary=`Clear now. Conditions change around ${t}.`;
-  }else{wwSummary='Mixed conditions across the 10-hour window.';}
-  if(upcomingRainMsg&&!allGood)wwSecondary=upcomingRainMsg;
+  const userName=localStorage.getItem('jw_user_name')||'Boss';
+  const wind=windMph;
+  const currentAlerts=getTradeAlerts(temp,windMph,precip,wmo,rh);
+  const alertMsg=currentAlerts.length?currentAlerts[0].msg:(WMO[wmo]||'Active weather');
+  const safeLines=[
+    `${temp}°F, winds ${wind}mph, ${rainPct}% rain chance.`,
+    `Clear conditions. ${temp}°F and ${wind}mph wind.`,
+    `No weather flags in the next 10 hours, ${userName}.`,
+    `${temp}°F. Wind ${wind}mph. Precipitation ${rainPct}%.`,
+    `Conditions are dialed in right now.`,
+    `The way you do one thing is the way you do everything.`
+  ];
+  const dangerLines=[
+    `${alertMsg}. ${temp}°F, winds ${wind}mph.`,
+    `Active weather flag: ${alertMsg}.`,
+    `${alertMsg} — ${temp}°F, ${rainPct}% rain.`
+  ];
+  const mixedLines=[
+    `Mixed conditions in the 10-hour window, ${userName}.`,
+    `${alertMsg}. Conditions vary through the day.`,
+    `Variable forecast. ${temp}°F now, ${rainPct}% rain chance.`
+  ];
+  const dayIdx=new Date().getDate();
+  const pool=allGood?safeLines:allBad?dangerLines:mixedLines;
+  let wwSummary=pool[dayIdx%pool.length];
 
   el.innerHTML=`<div class="fade-in">
     <div class="hero">
@@ -1111,7 +1117,6 @@ function buildConditionsContext(){
 }
 
 function getRemainingForeman(){
-  console.log('getRemainingForeman called');
   const today=new Date().toDateString();
   const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
   if(stored.date!==today)return 7;
@@ -1161,11 +1166,8 @@ function startVoiceInput(){
 }
 
 async function submitForemanQuestion(preset){
-  console.log('submitForemanQuestion called with:', preset);
   const input=document.getElementById('foremanInput');
   const question=preset||input?.value?.trim();
-  console.log('Resolved question:', question);
-  console.log('Remaining questions:', getRemainingForeman());
   if(!question)return;
   const name=localStorage.getItem('jw_user_name')||'Boss';
   const remaining=getRemainingForeman();
@@ -1795,8 +1797,6 @@ const TRADE_CONFIG={
   demolition:{name:'Demolition',windDanger:20,windCaution:15}
 };
 
-const TOMORROW_KEY='0jFpfjBpo5Zhm5duaeZEwT14339iXIcE';
-
 // ── STATE ──────────────────────────────────────────────────
 let currentData=null,currentLabel='',currentLat=null,currentLon=null;
 let savedLocs=JSON.parse(localStorage.getItem('jw_locs')||'[]');
@@ -1904,6 +1904,24 @@ function completeOnboarding(){
 
 
 // ── INIT ──────────────────────────────────────────────────
+(function renderCachedInstantly(){
+  const lastData=localStorage.getItem('jw_last_data');
+  const lastLabel=localStorage.getItem('jw_last_label');
+  const lastLat=localStorage.getItem('jw_last_lat');
+  const lastLon=localStorage.getItem('jw_last_lon');
+  if(!lastData||!lastLabel)return;
+  try{
+    currentData=JSON.parse(lastData);
+    currentLabel=lastLabel;
+    currentLat=parseFloat(lastLat);
+    currentLon=parseFloat(lastLon);
+    const el=document.getElementById('content');
+    if(el&&activeTab==='conditions')renderConditions(el);
+    document.getElementById('navTabs').style.display='flex';
+    renderLocs();
+  }catch(e){}
+})();
+
 showOnboarding();
 
 // Auto-activate from Stripe payment return
@@ -1998,12 +2016,10 @@ if('serviceWorker' in navigator){
     navigator.geolocation.getCurrentPosition(
       async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
       async()=>{
-        try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-        catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code or tap GPS to get started.</div>';}
+        document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
       }
     );
   } else {
-    try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-    catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP to get started.</div>';}
+    document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
   }
 })();
