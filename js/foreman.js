@@ -50,7 +50,6 @@ function buildConditionsContext(){
 }
 
 function getRemainingForeman(){
-  console.log('getRemainingForeman called');
   const today=new Date().toDateString();
   const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
   if(stored.date!==today)return 7;
@@ -100,11 +99,8 @@ function startVoiceInput(){
 }
 
 async function submitForemanQuestion(preset){
-  console.log('submitForemanQuestion called with:', preset);
   const input=document.getElementById('foremanInput');
   const question=preset||input?.value?.trim();
-  console.log('Resolved question:', question);
-  console.log('Remaining questions:', getRemainingForeman());
   if(!question)return;
   const name=localStorage.getItem('jw_user_name')||'Boss';
   const remaining=getRemainingForeman();

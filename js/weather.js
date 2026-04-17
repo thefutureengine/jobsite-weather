@@ -5,12 +5,12 @@ function getTradeAlerts(temp,windMph,precip,wmo,rh){
   const hi=heatIdx(temp,rh);
   const isStorm=DANGER.has(wmo);
   const isRain=WARN.has(wmo)||precip>0.1;
-  if(isStorm)return[{level:'danger',msg:"Sky's throwing a fit. Get off the jobsite, it's not worth it."}];
+  if(isStorm)alerts.push({level:'danger',msg:`${WMO[wmo]||'Severe weather'} in the forecast.`});
   const wd=trade.windDanger||45,wc=trade.windCaution||25;
   if(currentTrade==='roofing'){
     if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — the roof isn't going anywhere. You might be.`});
     else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph gusting up there. Hold your felt and your hat.`});
-    if(isRain)alerts.push({level:'danger',msg:'Wet roof. Gravity wins every time. Call it.'});
+    if(isRain)alerts.push({level:'danger',msg:'Wet roof conditions. Precipitation active.'});
   }else if(currentTrade==='concrete'){
     if(temp<40)alerts.push({level:'danger',msg:`${temp}°F — concrete cures slower than your Monday morning crew.`});
     else if(temp<50)alerts.push({level:'caution',msg:`${temp}°F — she'll cure, just not on your schedule. Use cold-weather mix.`});
@@ -70,7 +70,7 @@ function getTradeAlerts(temp,windMph,precip,wmo,rh){
     if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — debris control required. Wind is a hazard.`});
     if(isRain||precip>0.3)alerts.push({level:'caution',msg:'Rain — dust suppression active, mud hazard on site.'});
   }else{
-    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph} mph — secure everything that can move and get off elevated work.`});
+    if(windMph>=wd)alerts.push({level:'danger',msg:`${windMph}mph sustained winds. Elevated and overhead work affected.`});
     else if(windMph>=wc)alerts.push({level:'caution',msg:`${windMph} mph — tie down your materials. Wind doesn't care about your bid sheet.`});
     if(isRain)alerts.push({level:'caution',msg:`${WMO[wmo]||'Rain'} moving through. Keep an eye on it.`});
   }
@@ -113,7 +113,11 @@ async function fetchNWSAlerts(lat,lon){
 
 async function fetchTomorrowForecast(lat,lon){
   try{
-    const r=await fetch(`https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lon}&apikey=${TOMORROW_KEY}`);
+    const r=await fetch('/.netlify/functions/storm-forecast',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lat,lon})
+    });
     const d=await r.json();
     return d.timelines?.hourly||[];
   }catch(e){return[];}
@@ -270,22 +274,30 @@ function renderConditions(el){
   const allGood=hrStatuses.every(s=>s==='safe');
   const allBad=hrStatuses.every(s=>s==='danger');
   const userName=localStorage.getItem('jw_user_name')||'Boss';
-  let wwSummary='';
-  const goodLines=[
-    `Clean day ahead, ${userName}. Go make some money.`,
-    `No excuses today, ${userName}. The way you do one thing is the way you do everything.`,
-    `${userName} — clear all day. Set the standard.`,
-    `Conditions are dialed in, ${userName}. No one's coming to save the bid — go get it.`
+  const wind=windMph;
+  const currentAlerts=getTradeAlerts(temp,windMph,precip,wmo,rh);
+  const alertMsg=currentAlerts.length?currentAlerts[0].msg:(WMO[wmo]||'Active weather');
+  const safeLines=[
+    `${temp}°F, winds ${wind}mph, ${rainPct}% rain chance.`,
+    `Clear conditions. ${temp}°F and ${wind}mph wind.`,
+    `No weather flags in the next 10 hours, ${userName}.`,
+    `${temp}°F. Wind ${wind}mph. Precipitation ${rainPct}%.`,
+    `Conditions are dialed in right now.`,
+    `The way you do one thing is the way you do everything.`
   ];
-  if(allGood)wwSummary=goodLines[new Date().getDate()%goodLines.length];
-  else if(allBad)wwSummary=`Not today, ${userName}. Button it up and live to fight another day.`;
-  else if(firstBad===0&&firstGood>0){
-    const t=hourly[firstGood].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-    wwSummary=`Rough start, ${userName}. Window opens around ${t}. Be ready.`;
-  } else if(firstBad>0){
-    const t=hourly[firstBad].t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
-    wwSummary=`Good window now, ${userName}. Conditions turn around ${t} — plan your move.`;
-  } else wwSummary=`Mixed day, ${userName}. Adapt and get after it.`;
+  const dangerLines=[
+    `${alertMsg}. ${temp}°F, winds ${wind}mph.`,
+    `Active weather flag: ${alertMsg}.`,
+    `${alertMsg} — ${temp}°F, ${rainPct}% rain.`
+  ];
+  const mixedLines=[
+    `Mixed conditions in the 10-hour window, ${userName}.`,
+    `${alertMsg}. Conditions vary through the day.`,
+    `Variable forecast. ${temp}°F now, ${rainPct}% rain chance.`
+  ];
+  const dayIdx=new Date().getDate();
+  const pool=allGood?safeLines:allBad?dangerLines:mixedLines;
+  let wwSummary=pool[dayIdx%pool.length];
 
   el.innerHTML=`<div class="fade-in">
     <div class="hero">

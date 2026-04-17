@@ -31,8 +31,6 @@ const TRADE_CONFIG={
   demolition:{name:'Demolition',windDanger:20,windCaution:15}
 };
 
-const TOMORROW_KEY='0jFpfjBpo5Zhm5duaeZEwT14339iXIcE';
-
 // ── STATE ──────────────────────────────────────────────────
 let currentData=null,currentLabel='',currentLat=null,currentLon=null;
 let savedLocs=JSON.parse(localStorage.getItem('jw_locs')||'[]');
@@ -140,6 +138,24 @@ function completeOnboarding(){
 
 
 // ── INIT ──────────────────────────────────────────────────
+(function renderCachedInstantly(){
+  const lastData=localStorage.getItem('jw_last_data');
+  const lastLabel=localStorage.getItem('jw_last_label');
+  const lastLat=localStorage.getItem('jw_last_lat');
+  const lastLon=localStorage.getItem('jw_last_lon');
+  if(!lastData||!lastLabel)return;
+  try{
+    currentData=JSON.parse(lastData);
+    currentLabel=lastLabel;
+    currentLat=parseFloat(lastLat);
+    currentLon=parseFloat(lastLon);
+    const el=document.getElementById('content');
+    if(el&&activeTab==='conditions')renderConditions(el);
+    document.getElementById('navTabs').style.display='flex';
+    renderLocs();
+  }catch(e){}
+})();
+
 showOnboarding();
 
 // Auto-activate from Stripe payment return
@@ -222,12 +238,10 @@ if('serviceWorker' in navigator){
     navigator.geolocation.getCurrentPosition(
       async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
       async()=>{
-        try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-        catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code or tap GPS to get started.</div>';}
+        document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
       }
     );
   } else {
-    try{const geo=await geoSearch('65254');await loadByLatLon(geo.latitude,geo.longitude,'Glasgow, MO');}
-    catch(e){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP to get started.</div>';}
+    document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
   }
 })();
