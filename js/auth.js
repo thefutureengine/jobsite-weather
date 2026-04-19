@@ -33,7 +33,7 @@ async function handleAuthCallback(){
       const email=data.session.user.email;
       if(email){
         try{
-          const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+          const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
           const d=await r.json();
           if(d.success){
             localStorage.setItem('jw_pro','true');

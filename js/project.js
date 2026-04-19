@@ -294,13 +294,11 @@ async function summarizeSiteNotes(label,index){
   const tradeName=TRADE_CONFIG[trade]?.name||'General Contractor';
   const systemPrompt='You are a seasoned jobsite foreman with 30 years in the trades working for StrickerCo Solutions. You are reviewing job site notes for '+userName+', a '+tradeName+'.\n\nSummarize these notes in plain English — weather patterns, recurring issues, best working windows, notable delays, and the overall site weather story so far. Be specific, use the dates. Keep it under 100 words. Sound like a foreman talking to another foreman, not a report.\n\nJob site: '+label+'\nNotes:\n'+notesText;
   try{
-    const r=await fetch('/api/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Summarize the weather and site conditions history for '+label+' based on these notes.',systemPrompt})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Summarize the weather and site conditions history for '+label+' based on these notes.',systemPrompt})});
     const data=await r.json();
     output.textContent=data.answer||'Could not generate summary right now.';
     output.style.display='block';btn.textContent='🔨 REFRESH SUMMARY';btn.style.opacity='1';btn.disabled=false;
   }catch(e){
-    console.error('Foreman error:',e);
-    showToast(`Debug: ${e.message}`,5000);
     output.textContent="Foreman's off the grid. Try again.";output.style.display='block';
     btn.textContent='🔨 ASK THE FOREMAN — SUMMARIZE NOTES';btn.style.opacity='1';btn.disabled=false;
   }

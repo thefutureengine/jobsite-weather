@@ -144,7 +144,7 @@ async function restorePro(){
   if(!email){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email first.</span>';return;}
   if(status)status.innerHTML='<span style="color:var(--muted)">Checking...</span>';
   try{
-    const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
     const data=await r.json();
     if(data.success){
       localStorage.setItem('jw_pro','true');
@@ -163,7 +163,7 @@ async function claimFoundingCrewBenefit(){
   const email=localStorage.getItem('jw_auth_email')||localStorage.getItem('jw_restore_email');
   if(!email){showToast('Sign in first to claim your benefit.',3000);return;}
   try{
-    const r=await fetch('/api/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
     const d=await r.json();
     if(d.success){
       localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());localStorage.setItem('jw_crew_founding','true');localStorage.setItem('jw_crew_expires',(Date.now()+365*24*60*60*1000).toString());

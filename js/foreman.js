@@ -124,7 +124,7 @@ async function submitForemanQuestion(preset){
   const systemPrompt=`You are a seasoned jobsite foreman with 30 years in the trades. You work for StrickerCo Solutions. You're talking to ${name}, a ${tradeName} worker.\n\nStyle: ${styleInstructions[style]}\n\nOccasionally — not every response — weave in a short piece of field wisdom. Things like: "The way you do one thing is the way you do everything." Keep it subtle, never preachy.\n\nKeep ALL answers under 80 words. Use ${name}'s name once naturally. Be specific — use actual numbers from the conditions.\n\nCurrent conditions at ${currentLabel}: ${buildConditionsContext()}`;
 
   try{
-    const r=await fetch('/api/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,systemPrompt})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,systemPrompt})});
     const data=await r.json();
     incrementForeman();
     const rem=getRemainingForeman();
@@ -132,8 +132,6 @@ async function submitForemanQuestion(preset){
     if(countDisplay)countDisplay.textContent=rem+' question'+(rem===1?'':'s')+' left today';
     if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${(data.answer||'').replace(/"/g,'')}"</div></div>`;
   }catch(e){
-    console.error('Foreman error:',e);
-    showToast(`Debug: ${e.message}`,5000);
     if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:#ff6b6b">Foreman's off the grid. Check conditions manually.</div></div>`;
   }
 }

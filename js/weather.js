@@ -113,7 +113,7 @@ async function fetchNWSAlerts(lat,lon){
 
 async function fetchTomorrowForecast(lat,lon){
   try{
-    const r=await fetch('/.netlify/functions/storm-forecast',{
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/storm-forecast',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lat,lon})
