@@ -299,6 +299,8 @@ async function summarizeSiteNotes(label,index){
     output.textContent=data.answer||'Could not generate summary right now.';
     output.style.display='block';btn.textContent='🔨 REFRESH SUMMARY';btn.style.opacity='1';btn.disabled=false;
   }catch(e){
+    console.error('Foreman error:',e);
+    showToast(`Debug: ${e.message}`,5000);
     output.textContent="Foreman's off the grid. Try again.";output.style.display='block';
     btn.textContent='🔨 ASK THE FOREMAN — SUMMARIZE NOTES';btn.style.opacity='1';btn.disabled=false;
   }

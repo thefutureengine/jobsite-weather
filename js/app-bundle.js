@@ -1226,6 +1226,8 @@ async function submitForemanQuestion(preset){
     if(countDisplay)countDisplay.textContent=rem+' question'+(rem===1?'':'s')+' left today';
     if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${(data.answer||'').replace(/"/g,'')}"</div></div>`;
   }catch(e){
+    console.error('Foreman error:',e);
+    showToast(`Debug: ${e.message}`,5000);
     if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:#ff6b6b">Foreman's off the grid. Check conditions manually.</div></div>`;
   }
 }
@@ -1544,6 +1546,8 @@ async function summarizeSiteNotes(label,index){
     output.textContent=data.answer||'Could not generate summary right now.';
     output.style.display='block';btn.textContent='🔨 REFRESH SUMMARY';btn.style.opacity='1';btn.disabled=false;
   }catch(e){
+    console.error('Foreman error:',e);
+    showToast(`Debug: ${e.message}`,5000);
     output.textContent="Foreman's off the grid. Try again.";output.style.display='block';
     btn.textContent='🔨 ASK THE FOREMAN — SUMMARIZE NOTES';btn.style.opacity='1';btn.disabled=false;
   }
