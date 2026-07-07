@@ -78,14 +78,13 @@ sender (cron). If you want that, say so and I'll scope it — it's a backend fea
 not a one-file change. Marketing copy has been changed from "5AM nudge" to the honest
 "morning briefing."
 
-## 6. Light mode (M8 — deferred, needs a design decision)
+## 6. Light mode — DONE (manual toggle shipped)
 
-A correct light theme can't reuse the single `--accent` token: as a button
-*background* it wants a bright accent with dark text; as *text on a light surface*
-it wants a dark accent — the two can't both clear 4.5:1 with one value. Shipping the
-quick version regressed contrast (dark text on mid-orange buttons ≈ 3.2:1), so it was
-pulled. To do it right I need to split accent into `--accent` (bg) + `--accent-ink`
-(text) tokens and add white button text in light mode. ~1–2 hrs; say the word.
+Built as a manual **Settings → Appearance → Light mode** toggle (per your call), using
+split `--accent` (background) + `--on-accent` (text-on-accent) tokens so both themes
+clear WCAG AA. Verified: all 12 key color pairs ≥ 4.5:1, including the accent-as-text
+(5.67:1) and white-on-accent-button (5.67:1) cases that broke the first attempt.
+Nothing for you here — noted for completeness.
 
 ## 7. Splash screen art (L8 — cosmetic)
 

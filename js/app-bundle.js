@@ -9,6 +9,16 @@ function safeParse(str,fallback){try{const v=JSON.parse(str);return v==null?fall
 function safeSet(key,val){try{localStorage.setItem(key,val);return true;}catch(e){if(typeof showToast==='function')showToast('Storage is full — could not save. Free up space.',3000);return false;}}
 // fetch with an abort timeout (audit M4): no network call may hang the UI forever.
 function fetchT(url,opts,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||12000);return fetch(url,Object.assign({},opts,{signal:c.signal})).finally(()=>clearTimeout(t));}
+// Manual light/dark theme (persisted). The <head> also applies this pre-paint to
+// avoid a flash; this handles runtime toggling from Settings.
+function setTheme(t){
+  const theme=t==='light'?'light':'dark';
+  try{localStorage.setItem('jw_theme',theme);}catch(e){}
+  document.documentElement.setAttribute('data-theme',theme);
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(m)m.setAttribute('content',theme==='light'?'#ffffff':'#0a1520');
+}
+try{setTheme(localStorage.getItem('jw_theme')||'dark');}catch(e){}
 // "Now" at the CURRENT LOCATION's wall clock, expressed in the device-local frame
 // so it compares correctly against Open-Meteo hourly times (which are location-local
 // and parsed with new Date(t)). Fixes wrong "next hours" for saved out-of-tz sites (H2).
@@ -1629,6 +1639,13 @@ function openSettings(){
         <select id="settingsTrade" style="width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;outline:none;-webkit-appearance:none;appearance:none;">
           ${tradeOpts.map((v,i)=>`<option value="${v}" ${v===trade?'selected':''}>${tradeLabels[i]}</option>`).join('')}
         </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Appearance</div>
+        <div class="notify-row">
+          <div><div class="notify-label">Light mode</div><div class="notify-sub">Easier to read in direct sun</div></div>
+          <label class="toggle"><input type="checkbox" id="s-theme" ${localStorage.getItem('jw_theme')==='light'?'checked':''} onchange="setTheme(this.checked?'light':'dark')"><span class="toggle-slider"></span></label>
+        </div>
       </div>
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Morning briefing</div>

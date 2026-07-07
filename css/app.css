@@ -13,6 +13,7 @@
   --blue:#5bbcff;--blue-dim:rgba(91,188,255,0.15);
   --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.12);
   --text:#ffffff;--muted:rgba(255,255,255,0.72);--subtle:rgba(255,255,255,0.62);
+  --on-accent:#0a1520; /* text color that sits on an --accent background */
   --radius:12px;--radius-sm:8px;
 }
 html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;-webkit-tap-highlight-color:transparent;}
@@ -49,7 +50,7 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
 .search-row input:focus{border-color:var(--accent);}
 .btn{
   background:var(--accent);border:none;border-radius:var(--radius-sm);
-  padding:9px 14px;font-size:13px;font-weight:700;color:#0a1520;cursor:pointer;
+  padding:9px 14px;font-size:13px;font-weight:700;color:var(--on-accent);cursor:pointer;
   font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em;white-space:nowrap;
   transition:background 0.15s;
 }
@@ -247,7 +248,7 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
 .tier-body{padding:12px 14px;display:none;border-top:1px solid var(--border);}
 .tier-body.open{display:block;}
 .tier-feature{font-size:12px;color:var(--muted);padding:3px 0;}
-.tier-upgrade-btn{width:100%;background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.06em;padding:10px;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:12px;}
+.tier-upgrade-btn{width:100%;background:var(--accent);color:var(--on-accent);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.06em;padding:10px;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:12px;}
 .tier-chevron{color:var(--muted);font-size:10px;}
 
 /* ── PROJECT MODE ── */
@@ -343,9 +344,49 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
   *,*::before,*::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;scroll-behavior:auto!important;}
 }
 
-/* Light mode (M8) intentionally deferred: a correct light theme needs separate
-   tokens for accent-as-background (wants a bright accent + dark text) vs
-   accent-as-text-on-light (wants a dark accent) — one --accent can't satisfy both
-   at 4.5:1. Shipping a half-done light mode would REGRESS contrast, so it's filed
-   as a follow-up in HUMAN_TASKS rather than shipped broken. The dark theme's own
-   contrast was raised instead (--subtle 0.62, 11px floors). */
+/* ═══════════ LIGHT MODE (manual toggle — [data-theme="light"]) ═══════════
+   Dual-token approach: --accent is a deep orange that clears 4.5:1 BOTH as text on
+   a light surface AND as a button background paired with white --on-accent text.
+   All dark-theme hardcoded whites (#ffffff numbers + inline rgba-white secondary
+   text) are retargeted to dark tokens here so nothing goes invisible. Dark mode is
+   the default and is completely unaffected by this block. */
+html[data-theme="light"]{
+  --bg:#eef2f6;--surface:#ffffff;--surface2:#f4f7fa;--surface3:#eaeff4;
+  --border:rgba(10,21,32,0.18);--border2:rgba(10,21,32,0.30);
+  --text:#0a1520;--muted:rgba(10,21,32,0.72);--subtle:rgba(10,21,32,0.60);
+  --accent:#9a5600;--accent2:#824900;--accent-dim:rgba(154,86,0,0.12);--on-accent:#ffffff;
+  --blue:#1565c0;--blue-dim:rgba(21,101,192,0.12);
+  --safe:#2e7d32;--safe-dim:rgba(46,125,50,0.14);
+  --danger:#c62828;--danger-dim:rgba(198,40,40,0.12);
+  --caution:#9a5600;--caution-dim:rgba(154,86,0,0.14);
+}
+/* Prominent numbers hardcoded #ffffff for dark: recolor + drop dark strokes/shadows */
+html[data-theme="light"] .temp-display,
+html[data-theme="light"] .stat-val,
+html[data-theme="light"] .sun-val,
+html[data-theme="light"] .fi-val,
+html[data-theme="light"] .hr-tmp,
+html[data-theme="light"] .fc-hi{color:var(--text);-webkit-text-stroke:0;text-shadow:none;}
+/* Secondary CSS text hardcoded as rgba-white */
+html[data-theme="light"] .temp-unit,
+html[data-theme="light"] .stat-sub,
+html[data-theme="light"] .fi-lbl,
+html[data-theme="light"] .fc-lo,
+html[data-theme="light"] .hr-wind,
+html[data-theme="light"] .pm-data-label{color:var(--muted);}
+html[data-theme="light"] .hr-pct{color:var(--blue);text-shadow:none;}
+/* Inline secondary text (rgba white) inside JS-rendered templates → readable dark */
+html[data-theme="light"] [style*="color:rgba(255,255,255"]{color:rgba(10,21,32,0.6)!important;}
+html[data-theme="light"] [style*="color:#fff"]{color:var(--text)!important;}
+/* Inline accent-background buttons/CTAs: dark text → white on the deep-orange accent */
+html[data-theme="light"] [style*="background:var(--accent)"],
+html[data-theme="light"] [style*="background: var(--accent)"]{color:var(--on-accent)!important;}
+/* Danger/severe text that was a light red on dark → a darker red on light */
+html[data-theme="light"] .error-state,
+html[data-theme="light"] .alert.danger .alert-head,
+html[data-theme="light"] .nws-severe .nws-event,
+html[data-theme="light"] .storm-banner.storm-red{color:#c62828;}
+/* Chrome that assumed a dark base */
+html[data-theme="light"] .modal-overlay{background:rgba(10,21,32,0.45);}
+html[data-theme="light"] .jw-toast{background:rgba(255,255,255,0.97);color:var(--text);}
+html[data-theme="light"] .temp-display{-webkit-text-stroke:0;}

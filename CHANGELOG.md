@@ -27,8 +27,14 @@ hardening under the hood.
 - Weather/AI requests can no longer hang the screen indefinitely. (M4)
 
 ### Added
+- **Light mode** — a manual toggle in Settings ("Appearance → Light mode") for
+  readability in direct sun. Every color meets WCAG AA contrast in both themes.
 - Higher text contrast, reduced-motion support, larger touch targets, screen-reader
   labels and live regions, and visible keyboard focus. (H7, M8)
+
+### Fixed (follow-ups)
+- Night hours now show a **moon** for clear/partly-clear skies instead of a sun
+  (hourly strip, current conditions, and the day detail).
 
 ### Security & reliability (under the hood)
 - Ask-the-Foreman AI endpoint hardened: the prompt is built server-side, inputs are
