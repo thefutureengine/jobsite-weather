@@ -50,6 +50,17 @@ async function signOut(){
   localStorage.removeItem(AUTH_EMAIL_KEY);
 }
 
+// Owner/tester accounts: signing in with one of these emails unlocks every tier
+// (Pro + Crew + Project) on that device for testing. Crew members unlock through
+// the normal invite links sent from an unlocked account.
+const DEV_ACCOUNTS=new Set(['john@strickercosolutions.com']);
+function applyDevUnlock(email){
+  if(!email||!DEV_ACCOUNTS.has(String(email).trim().toLowerCase()))return false;
+  ['jw_pro','jw_crew','jw_project'].forEach(k=>{try{localStorage.setItem(k,'true');}catch(e){}});
+  try{localStorage.setItem('jw_founding_crew','true');localStorage.removeItem('jw_crew_expires');}catch(e){}
+  return true;
+}
+
 async function handleAuthCallback(){
   if(!sb)return;
   try{
@@ -57,6 +68,7 @@ async function handleAuthCallback(){
     if(data?.session){
       localStorage.setItem(AUTH_EMAIL_KEY,data.session.user.email);
       const email=data.session.user.email;
+      if(applyDevUnlock(email)){if(typeof updateProjectPill==='function')updateProjectPill();}
       if(email){
         try{
           const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+data.session.access_token},body:JSON.stringify({})});
@@ -765,6 +777,13 @@ function renderConditions(el){
     const a=getTradeAlerts(h.temp,h.wind,h.precip,h.wmo,h.rh);
     return a.length===0?'safe':a.some(x=>x.level==='danger')?'danger':'caution';
   });
+  // The Workability card must agree with the near-term forecast: never say
+  // "all clear" while the same hourly data shows danger within ~3 hours.
+  let wkAdj=wk;
+  if(wk.d==='safe'){
+    const soonIdx=hrStatuses.slice(0,3).findIndex(s=>s==='danger');
+    if(soonIdx>=0)wkAdj={l:`Clear now — ${WMO[hourly[soonIdx].wmo]||'rough weather'} ${soonIdx===0?'this hour':'~'+soonIdx+'h out'}. Plan your window.`,d:'caution'};
+  }
 
   const hrHTML=hourly.map((h,i)=>{
     const isDanger=DANGER.has(h.wmo),isWarn=WARN.has(h.wmo);
@@ -844,7 +863,7 @@ function renderConditions(el){
     <div class="section">
       <div class="sec-label">Field conditions · ${tradeName}</div>
       <div class="field-grid">
-        <div class="field-item"><div class="dot ${dotClass(wk.d)}"></div><div><div class="fi-lbl">Workability</div><div class="fi-val">${wk.d==='safe'?getWorkabilityAllClear():wk.l}</div></div></div>
+        <div class="field-item"><div class="dot ${dotClass(wkAdj.d)}"></div><div><div class="fi-lbl">Workability</div><div class="fi-val">${wkAdj.d==='safe'?getWorkabilityAllClear():wkAdj.l}</div></div></div>
         <div class="field-item"><div class="dot ${dotClass(wr.d)}"></div><div><div class="fi-lbl">Wind risk</div><div class="fi-val">${wr.l}</div></div></div>
         <div class="field-item"><div class="dot ${dotClass(hr2.d)}"></div><div><div class="fi-lbl">Heat index</div><div class="fi-val">${hi}°F</div></div></div>
         <div class="field-item"><div class="dot ${dotClass(rainSt.d)}"></div><div><div class="fi-lbl">Precip</div><div class="fi-val">${rainSt.l}</div></div></div>
@@ -1037,7 +1056,9 @@ function openDayModal(dayIndex,skipNav){
     t:new Date(ht),temp:Math.round(currentData.hourly.temperature_2m[i]),
     prob:currentData.hourly.precipitation_probability[i]||0,
     wmo:currentData.hourly.weather_code[i],
-    wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i]))
+    wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i])),
+    rh:Math.round(currentData.hourly.relative_humidity_2m?.[i]||60),
+    precip:currentData.hourly.precipitation?.[i]||0
   })).filter(h=>h.t>=dayStart&&h.t<=dayEnd);
 
   const daySunrise=daily.sunrise?.[dayIndex]?new Date(daily.sunrise[dayIndex]):null;
@@ -1055,7 +1076,15 @@ function openDayModal(dayIndex,skipNav){
     </div>`;
   }).join('');
 
-  const dayAlerts=getTradeAlerts(Math.round((hi+lo)/2),wind,rain>40?0.15:0,wmo,60);
+  // Derive the trade assessment from the SAME hourly data rendered below, so the
+  // verdict can never contradict the hour rows. Working window 6a-6p when present.
+  const workHrs=dayHours.filter(h=>h.t.getHours()>=6&&h.t.getHours()<18);
+  const assessPool=workHrs.length?workHrs:dayHours;
+  const seenMsgs=new Set();let dayAlerts=[];
+  assessPool.forEach(h=>{getTradeAlerts(h.temp,h.wind,h.precip,h.wmo,h.rh).forEach(a=>{if(!seenMsgs.has(a.msg)){seenMsgs.add(a.msg);dayAlerts.push(a);}});});
+  dayAlerts.sort((a,b)=>(a.level==='danger'?0:1)-(b.level==='danger'?0:1));
+  dayAlerts=dayAlerts.slice(0,4);
+  if(!dayAlerts.length&&!assessPool.length)dayAlerts=getTradeAlerts(Math.round((hi+lo)/2),wind,rain>40?0.15:0,wmo,60);
   const dayStatus=dayAlerts.length===0?`<span style="color:var(--safe)">✓ ${getWorkabilityAllClear()}</span>`:dayAlerts.map(a=>`<span style="color:${a.level==='danger'?'#ff6b6b':'var(--accent)'}">${a.msg}</span>`).join('<br>');
 
   document.getElementById('modalInner').innerHTML=`
@@ -2039,6 +2068,8 @@ if(!Array.isArray(savedLocs))savedLocs=[];
 renderLocs();
 updateProjectPill();
 showTrialToast();
+// Re-assert owner/tester unlock on every boot (wins over any expiry that ran above).
+applyDevUnlock(localStorage.getItem('jw_auth_email'));
 handleAuthCallback();
 if(typeof handleCrewInviteCallback==='function')handleCrewInviteCallback();
 

@@ -386,6 +386,19 @@ html[data-theme="light"] .error-state,
 html[data-theme="light"] .alert.danger .alert-head,
 html[data-theme="light"] .nws-severe .nws-event,
 html[data-theme="light"] .storm-banner.storm-red{color:#c62828;}
+/* Cards hardcoded translucent-white for dark (invisible on light): give them a real
+   surface, a visible border, and a soft shadow so they read as cards, not floaters */
+html[data-theme="light"] .field-item{background:var(--surface);border:1px solid var(--border2);}
+html[data-theme="light"] .fc-bar-wrap{background:rgba(10,21,32,0.12);}
+html[data-theme="light"] .field-item,
+html[data-theme="light"] .stat-box,
+html[data-theme="light"] .hr-item,
+html[data-theme="light"] .dh-item,
+html[data-theme="light"] .modal-stat,
+html[data-theme="light"] .assessment-box,
+html[data-theme="light"] .site-note-card,
+html[data-theme="light"] .tier-card,
+html[data-theme="light"] .project-site-card{border-color:var(--border2);box-shadow:0 1px 3px rgba(10,21,32,0.10);}
 /* Chrome that assumed a dark base */
 html[data-theme="light"] .modal-overlay{background:rgba(10,21,32,0.45);}
 html[data-theme="light"] .jw-toast{background:rgba(255,255,255,0.97);color:var(--text);}
