@@ -4,7 +4,8 @@ const PRECACHE = [
   '/index.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/app-bundle.js'
+  '/js/app-bundle.js',
+  '/js/vendor/supabase.min.js'
 ];
 
 self.addEventListener('install', e => {

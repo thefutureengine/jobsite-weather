@@ -205,7 +205,7 @@ function showTrialToast(){
   let msg='';
   if(d>=25)msg='Pro trial · Ask the Foreman is yours — 7 questions a day';
   else if(d>=15)msg=`Pro trial · ${d} days left · Saved locations & job notes included`;
-  else if(d>=7)msg=`Pro trial · ${d} days left · 5AM morning briefing is on`;
+  else if(d>=7)msg=`Pro trial · ${d} days left · morning briefing is on`;
   else if(d>=3)msg=`Pro trial · ${d} days left · You've wasted more than $4.99 on bad weather calls`;
   else if(d===2)msg='Pro trial ends in 2 days · $4.99 keeps everything';
   else if(d===1)msg='Last day of trial · $4.99/year · No ads. Ever.';
@@ -235,7 +235,7 @@ function showPaywall(feature){
       </div>
       <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:1rem;text-align:left">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Pro includes</div>
-        ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved job site locations','📝 Job site notes','🌅 5AM morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text)">${f}</div>`).join('')}
+        ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved job site locations','📝 Job site notes','🌅 Morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text)">${f}</div>`).join('')}
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--accent);margin-bottom:4px">$4.99/year</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:1.25rem">No ads. Ever.</div>
@@ -391,22 +391,19 @@ async function loadByLatLon(lat,lon,label){
 
 async function doSearch(){
   const raw=document.getElementById('locInput').value.trim();
-  const cleaned=raw.replace(/\D/g,'').slice(0,5);
-  if(!cleaned||cleaned.length<5){
-    document.getElementById('content').innerHTML='<div class="error-state">Please enter a valid 5-digit ZIP code.</div>';
-    return;
-  }
+  if(!raw){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code or city name.</div>';return;}
+  // M10: accept a ZIP (pure digits) OR a city name ("Austin, TX", "Denver").
+  const query=/^\d{3,}$/.test(raw)?raw.replace(/\D/g,'').slice(0,5):raw;
   document.getElementById('content').innerHTML='<div class="loading">Searching</div>';
   clearAlert();
   try{
-    const geo=await geoSearch(cleaned);
+    const geo=await geoSearch(query);
     const label=geo.name+(geo.admin1?', '+geo.admin1:'');
     document.getElementById('locInput').value=label;
     activeLoc=null;
     await loadByLatLon(geo.latitude,geo.longitude,label);
   }catch(e){
-    console.error('Search error:',e);
-    document.getElementById('content').innerHTML='<div class="error-state">ZIP not found. Try a valid 5-digit US ZIP code.</div>';
+    document.getElementById('content').innerHTML='<div class="error-state">Location not found. Try a ZIP code or a city like "Austin, TX".</div>';
   }
 }
 
@@ -593,6 +590,8 @@ async function fetchWx(lat,lon){
 async function fetchNWSAlerts(lat,lon){
   try{
     const r=await fetchT(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,{headers:{Accept:'application/geo+json','User-Agent':'JobSiteWeather/1.0 (support@strickercosolutions.com)'}},10000);
+    // api.weather.gov returns 4xx for points outside US coverage — flag it (M10).
+    nwsOutOfCoverage=(r.status>=400&&r.status<500);
     if(!r.ok)return[];
     const d=await r.json();
     return(d.features||[]).map(f=>({event:f.properties.event,severity:f.properties.severity,headline:f.properties.headline,expires:f.properties.expires,urgency:f.properties.urgency}));
@@ -624,28 +623,43 @@ function getDismissedAlerts(){
 }
 function dismissAlert(event){
   const list=getDismissedAlerts();
-  if(!list.includes(event)){list.push(event);sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}
+  if(!list.includes(event)){list.push(event);try{sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}catch(e){}}
+}
+// M9: a severe alert must never vanish permanently from an accidental glove-swipe.
+let lastDismissedNWS=null;
+let nwsOutOfCoverage=false;
+function undoLastNWS(){
+  if(!lastDismissedNWS)return;
+  const ev=lastDismissedNWS;lastDismissedNWS=null;
+  try{const list=getDismissedAlerts().filter(e=>e!==ev);sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}catch(e){}
+  renderNWSAlerts(nwsAlerts);
+}
+function offerUndoNWS(card){
+  if(card&&card.classList.contains('nws-severe')){
+    lastDismissedNWS=card.dataset.event;
+    if(typeof showToast==='function')showToast('Severe alert hidden. <span onclick="undoLastNWS()" style="color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline">UNDO</span>',6000);
+  }
 }
 
 function renderNWSAlerts(alerts){
   const wrap=document.getElementById('nwsAlerts');
-  if(!alerts?.length){wrap.innerHTML='';return;}
+  // M10: NWS covers the US only — say so for out-of-coverage (non-US) locations.
+  const note=nwsOutOfCoverage?`<div style="padding:8px 16px 0"><div style="font-size:11px;color:var(--muted);line-height:1.5">ℹ️ Severe-weather alerts cover the US only. Current conditions and the 7-day forecast still work here.</div></div>`:'';
   const dismissed=getDismissedAlerts();
-  const visible=alerts.filter(a=>!dismissed.includes(a.event)).slice(0,3);
-  if(!visible.length){wrap.innerHTML='';return;}
+  const visible=(alerts||[]).filter(a=>!dismissed.includes(a.event)).slice(0,3);
+  if(!visible.length){wrap.innerHTML=note;return;}
   const SEVERE=new Set(['Tornado Warning','Tornado Watch','Severe Thunderstorm Warning','Severe Thunderstorm Watch','Flash Flood Warning','Flash Flood Watch','Blizzard Warning','Ice Storm Warning','Winter Storm Warning','Extreme Wind Warning','Hurricane Warning','Tropical Storm Warning']);
   const html=visible.map(a=>{
     const isSev=SEVERE.has(a.event)||a.severity==='Extreme'||a.urgency==='Immediate';
     const exp=a.expires?new Date(a.expires).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-    const safeEvent=a.event.replace(/'/g,"\\'");
-    return`<div class="nws-alert ${isSev?'nws-severe':'nws-moderate'}" data-event="${a.event.replace(/"/g,'&quot;')}">
-      <button class="nws-dismiss" onclick="dismissNWSAlert(this)" title="Dismiss">×</button>
-      <div class="nws-event">${isSev?'⚠ ':''}${a.event}</div>
-      <div class="nws-headline">${a.headline||''}</div>
-      ${exp?`<div class="nws-exp">Until ${exp}</div>`:''}
+    return`<div class="nws-alert ${isSev?'nws-severe':'nws-moderate'}" data-event="${esc(a.event)}" role="alert">
+      <button class="nws-dismiss" onclick="dismissNWSAlert(this)" title="Dismiss" aria-label="Dismiss ${esc(a.event)} alert">×</button>
+      <div class="nws-event">${isSev?'⚠ ':''}${esc(a.event)}</div>
+      <div class="nws-headline">${esc(a.headline||'')}</div>
+      ${exp?`<div class="nws-exp">Until ${esc(exp)}</div>`:''}
     </div>`;
   }).join('');
-  wrap.innerHTML=`<div style="padding:0 16px;margin-top:8px">${html}</div>`;
+  wrap.innerHTML=`<div style="padding:0 16px;margin-top:8px">${html}</div>`+note;
   // Wire swipe-to-dismiss on each card
   wrap.querySelectorAll('.nws-alert').forEach(card=>{
     let sx=0,sy=0;
@@ -662,7 +676,8 @@ function renderNWSAlerts(alerts){
         card.classList.add('dismissed');
         const event=card.dataset.event;
         dismissAlert(event);
-        setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML='';},250);
+        offerUndoNWS(card);
+        setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML=note;},250);
       } else {card.style.transform='';card.style.opacity='';}
     },{passive:true});
   });
@@ -673,6 +688,7 @@ function dismissNWSAlert(btn){
   if(!card)return;
   card.classList.add('dismissed');
   dismissAlert(card.dataset.event);
+  offerUndoNWS(card);
   const wrap=document.getElementById('nwsAlerts');
   setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML='';},250);
 }
@@ -1635,7 +1651,7 @@ function openSettings(){
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Morning briefing</div>
         <div class="notify-row">
-          <div><div class="notify-label">5AM nudge</div><div class="notify-sub">Check conditions before the day starts</div></div>
+          <div><div class="notify-label">Morning briefing</div><div class="notify-sub">Weather recap when you open the app in the morning</div></div>
           <label class="toggle"><input type="checkbox" id="s-briefing" ${briefingOn?'checked':''}><span class="toggle-slider"></span></label>
         </div>
       </div>
@@ -1802,25 +1818,27 @@ function checkPushAlerts(tradeAlerts,nws){
   }
 }
 // ── MORNING BRIEFING ──────────────────────────────────────
+// M3: the old version scheduled the notification with a multi-hour setTimeout that
+// no PWA/tab survives, so it almost never fired. A reliable 5AM push needs Web Push
+// (VAPID + server) — see HUMAN_TASKS. Until then this delivers an honest, reliable
+// briefing when the crew OPENS the app in the morning (and, as a bonus, an OS
+// notification if permission is already granted while the app is open).
 function scheduleMorningBriefing(){
-  if(Notification.permission!=='granted')return;
   if(localStorage.getItem('jw_morning_briefing')==='false')return;
-  const lastScheduled=localStorage.getItem('jw_briefing_scheduled');
   const today=new Date().toDateString();
-  if(lastScheduled===today)return;
-  const now=new Date();
-  const tomorrow5am=new Date();
-  tomorrow5am.setDate(tomorrow5am.getDate()+1);
-  tomorrow5am.setHours(5,0,0,0);
-  const msUntil5am=tomorrow5am-now;
-  setTimeout(()=>{
-    const nm=localStorage.getItem('jw_user_name')||'Boss';
-    const trade=localStorage.getItem('jw_trade')||'general';
-    const tradeNames={general:'your crew',roofing:'the roofing crew',concrete:'the concrete crew',electrical:'the electrical crew',plumbing:'the plumbing crew',hvac:'the HVAC crew',framing:'the framing crew',painting:'the painting crew',landscaping:'the landscaping crew',excavation:'the excavation crew',farming:'the farming operation'};
-    new Notification(`Morning ${nm} — JobSite Weather`,{body:`Time to check conditions for ${tradeNames[trade]||'your crew'}. Tap to see what the day looks like.`,icon:'/icons/icon-192.png',badge:'/icons/icon-72.png',tag:'morning-briefing',renotify:false});
-    localStorage.setItem('jw_briefing_scheduled',new Date().toDateString());
-  },msUntil5am);
-  localStorage.setItem('jw_briefing_scheduled',today);
+  if(localStorage.getItem('jw_briefing_shown')===today)return;
+  const hr=new Date().getHours();
+  if(hr<5||hr>=11)return;            // morning window only
+  if(!currentData||!currentData.current)return;
+  localStorage.setItem('jw_briefing_shown',today);
+  const nm=localStorage.getItem('jw_user_name')||'Boss';
+  const c=currentData.current;
+  const temp=Math.round(c.temperature_2m);
+  const wind=kmh2mph(Math.round(c.wind_speed_10m));
+  const alerts=getTradeAlerts(temp,wind,c.precipitation||0,c.weather_code,Math.round(c.relative_humidity_2m));
+  const head=alerts.some(a=>a.level==='danger')?'Heads up today':alerts.length?'Take note today':'Clear to work';
+  if(typeof showToast==='function')showToast(`🌅 Morning ${nm}. ${head}: ${temp}°F, wind ${wind}mph at ${esc(currentLabel)}.`,5000);
+  try{if(window.Notification&&Notification.permission==='granted'){new Notification(`Morning ${nm} — JobSite Weather`,{body:`${head}: ${temp}°F, wind ${wind}mph.`,icon:'/icons/icon-192.png',badge:'/icons/icon-72.png',tag:'morning-briefing'});}}catch(e){}
 }
 // ── SUPABASE ──────────────────────────────────────────────
 const SUPABASE_URL='https://jfpyrlregzwmvltrhgfq.supabase.co';

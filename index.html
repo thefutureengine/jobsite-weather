@@ -26,14 +26,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="preload" href="/js/app-bundle.js" as="script"/>
 <link rel="preload" href="/css/app.css" as="style"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/js/vendor/supabase.min.js" defer></script>
 <link rel="stylesheet" href="/css/app.css"/>
 </head>
 <body>
 <div id="seo-content" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
   <h1>JobSite Weather — Built for the Trades</h1>
   <p>Weather app built for contractors, tradespeople, and field crews. Trade-specific conditions, workability ratings, severe weather alerts, and Ask the Foreman — AI-powered jobsite weather advice personalized to your trade.</p>
-  <p>Features: trade alerts for roofing, concrete, electrical, framing, painting, HVAC, plumbing, landscaping, excavation, farming, general contracting, and more. Workability window, storm countdown, 5AM morning briefing, saved job sites, job site notes.</p>
+  <p>Features: trade alerts for roofing, concrete, electrical, framing, painting, HVAC, plumbing, landscaping, excavation, farming, general contracting, and more. Workability window, storm countdown, morning briefing, saved job sites, job site notes.</p>
   <p>Free forever. Pro plan $4.99/year. No ads. Ever. Built by StrickerCo Solutions.</p>
 </div>
 <div class="app">
@@ -51,7 +51,7 @@
 
   <div class="search-wrap">
     <div class="search-row">
-      <input type="text" id="locInput" placeholder="Enter ZIP code" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric" maxlength="5"/>
+      <input type="text" id="locInput" placeholder="ZIP code or city" aria-label="Search by ZIP code or city" autocomplete="off" autocorrect="off" spellcheck="false"/>
       <button class="btn" onclick="doSearch()">Go</button>
       <button class="btn btn-ghost" onclick="useGPS()">📍 GPS</button>
     </div>
@@ -122,6 +122,6 @@
 <!-- TOAST -->
 <div id="toastContainer"></div>
 
-<script src="/js/app-bundle.js"></script>
+<script src="/js/app-bundle.js" defer></script>
 </body>
 </html>
