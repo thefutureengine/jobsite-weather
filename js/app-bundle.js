@@ -33,7 +33,7 @@ async function handleAuthCallback(){
       const email=data.session.user.email;
       if(email){
         try{
-          const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+          const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+data.session.access_token},body:JSON.stringify({})});
           const d=await r.json();
           if(d.success){
             localStorage.setItem('jw_pro','true');
@@ -1216,10 +1216,14 @@ async function submitForemanQuestion(preset){
     facts:'Be purely factual. Numbers and times only, minimal commentary.'
   };
   const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
-  const systemPrompt=`You are a seasoned jobsite foreman with 30 years in the trades. You work for StrickerCo Solutions. You're talking to ${name}, a ${tradeName} worker.\n\nStyle: ${styleInstructions[style]}\n\nOccasionally — not every response — weave in a short piece of field wisdom. Things like: "The way you do one thing is the way you do everything." Keep it subtle, never preachy.\n\nKeep ALL answers under 80 words. Use ${name}'s name once naturally. Be specific — use actual numbers from the conditions.\n\nCurrent conditions at ${currentLabel}: ${buildConditionsContext()}`;
 
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,systemPrompt})});
+    const headers={'Content-Type':'application/json'};
+    try{const _s=await getSession();if(_s&&_s.access_token)headers.Authorization='Bearer '+_s.access_token;}catch(e){}
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers,signal:ctrl.signal,body:JSON.stringify({mode:'advice',question,name,tradeName,style,label:currentLabel,conditions:buildConditionsContext()})});
+    clearTimeout(timer);
+    if(!r.ok)throw new Error('foreman '+r.status);
     const data=await r.json();
     incrementForeman();
     const rem=getRemainingForeman();
@@ -1538,9 +1542,13 @@ async function summarizeSiteNotes(label,index){
   const userName=localStorage.getItem('jw_user_name')||'Boss';
   const trade=localStorage.getItem('jw_trade')||'general';
   const tradeName=TRADE_CONFIG[trade]?.name||'General Contractor';
-  const systemPrompt='You are a seasoned jobsite foreman with 30 years in the trades working for StrickerCo Solutions. You are reviewing job site notes for '+userName+', a '+tradeName+'.\n\nSummarize these notes in plain English — weather patterns, recurring issues, best working windows, notable delays, and the overall site weather story so far. Be specific, use the dates. Keep it under 100 words. Sound like a foreman talking to another foreman, not a report.\n\nJob site: '+label+'\nNotes:\n'+notesText;
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Summarize the weather and site conditions history for '+label+' based on these notes.',systemPrompt})});
+    const headers={'Content-Type':'application/json'};
+    try{const _s=await getSession();if(_s&&_s.access_token)headers.Authorization='Bearer '+_s.access_token;}catch(e){}
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers,signal:ctrl.signal,body:JSON.stringify({mode:'summary',name:userName,tradeName,label,notesText})});
+    clearTimeout(timer);
+    if(!r.ok)throw new Error('summary '+r.status);
     const data=await r.json();
     output.textContent=data.answer||'Could not generate summary right now.';
     output.style.display='block';btn.textContent='🔨 REFRESH SUMMARY';btn.style.opacity='1';btn.disabled=false;
@@ -1713,12 +1721,23 @@ function saveSettings(){
 }
 
 async function restorePro(){
-  const email=document.getElementById('restoreEmail')?.value?.trim();
   const status=document.getElementById('restoreStatus');
-  if(!email){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email first.</span>';return;}
+  const session=await getSession();
+  // Entitlement is granted from the email on your VERIFIED session, never from a
+  // typed address (audit H1). If not signed in, send a magic link — restore then
+  // runs automatically via handleAuthCallback when you return.
+  if(!session||!session.access_token){
+    const email=document.getElementById('restoreEmail')?.value?.trim();
+    if(!email||!email.includes('@')){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email — we\'ll send a secure sign-in link.</span>';return;}
+    if(status)status.innerHTML='<span style="color:var(--muted)">Sending sign-in link...</span>';
+    const sent=await signInWithMagicLink(email);
+    if(sent)localStorage.setItem('jw_auth_email',email);
+    if(status)status.innerHTML=sent?'<span style="color:var(--safe)">✓ Check your email for a sign-in link. Pro restores automatically once you\'re back.</span>':'<span style="color:#ff6b6b">Could not send link. Try again.</span>';
+    return;
+  }
   if(status)status.innerHTML='<span style="color:var(--muted)">Checking...</span>';
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({})});
     const data=await r.json();
     if(data.success){
       localStorage.setItem('jw_pro','true');
@@ -1734,10 +1753,11 @@ async function restorePro(){
 }
 
 async function claimFoundingCrewBenefit(){
-  const email=localStorage.getItem('jw_auth_email')||localStorage.getItem('jw_restore_email');
-  if(!email){showToast('Sign in first to claim your benefit.',3000);return;}
+  const session=await getSession();
+  if(!session||!session.access_token){showToast('Sign in first to claim your benefit.',3000);return;}
+  const email=session.user?.email||localStorage.getItem('jw_auth_email');
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({})});
     const d=await r.json();
     if(d.success){
       localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());localStorage.setItem('jw_crew_founding','true');localStorage.setItem('jw_crew_expires',(Date.now()+365*24*60*60*1000).toString());
