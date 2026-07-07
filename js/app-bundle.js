@@ -400,7 +400,8 @@ function useGPS(){
   clearAlert();
   navigator.geolocation.getCurrentPosition(
     async pos=>{const{latitude:lat,longitude:lon}=pos.coords;document.getElementById('locInput').value='';activeLoc=null;await loadByLatLon(lat,lon,'Your location');},
-    ()=>{document.getElementById('content').innerHTML='<div class="error-state">Location access denied. Enter a city or ZIP above.</div>';}
+    err=>{const denied=err&&err.code===1;document.getElementById('content').innerHTML=`<div class="error-state">${denied?'Location access denied.':'Could not get a location fix (timed out).'} Enter a city or ZIP above.</div>`;},
+    {enableHighAccuracy:false,timeout:10000,maximumAge:600000}
   );
 }
 
@@ -2018,10 +2019,16 @@ if(typeof handleCrewInviteCallback==='function')handleCrewInviteCallback();
     else if(dx>0&&cur>0)switchTab(TABS[cur-1]);
   },{passive:true});
 })();
-if('serviceWorker' in navigator){
+// Register the service worker only for the real web PWA. Inside the Capacitor
+// native shell the origin is https://localhost served from bundled assets — a SW
+// there is useless at best and a stale-cache trap across AAB updates at worst (M1).
+if('serviceWorker' in navigator && !(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/sw.js').catch(()=>{});
   });
+} else if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()&&'serviceWorker' in navigator){
+  // Native build: proactively unregister any SW a prior web-mode install left behind.
+  navigator.serviceWorker.getRegistrations?.().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
 }
 
 (async()=>{
@@ -2050,7 +2057,8 @@ if('serviceWorker' in navigator){
       async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
       async()=>{
         document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
-      }
+      },
+      {enableHighAccuracy:false,timeout:10000,maximumAge:600000}
     );
   } else {
     document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
