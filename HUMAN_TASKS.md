@@ -20,6 +20,22 @@ repo), so the Gradle output is **unsigned**. To ship:
    signed AAB (versionCode **6**, versionName **1.1.1**).
 6. Paste the `CHANGELOG.md` 1.1.1 entry into "What's new".
 
+**Play-readiness pre-check (verified against the built AAB — should NOT hang approval):**
+- versionCode **6** > your live **5** ✓ (Play requires strictly higher)
+- versionName **1.1.1** ✓ · targetSdk **36** ✓ (meets Play's minimum) · release is non-debuggable ✓
+- **Icons: not touched, not corrupt.** `res/` is byte-identical to the approved vc5;
+  all launcher PNGs at every density validated (correct PNG headers, no truncation),
+  adaptive icon + round icon intact — verified both on disk and *inside* the AAB.
+- Permissions in the merged manifest: `INTERNET`, `ACCESS_COARSE_LOCATION`,
+  `ACCESS_FINE_LOCATION` only. (`android.permission.DUMP` seen in a raw string scan is
+  an AndroidX library string artifact, NOT a `<uses-permission>` — it won't show on
+  your listing.)
+- **The one thing that WOULD get rejected: signing with the wrong key.** Sign with the
+  SAME upload keystore used for vc5 (Play App Signing enforces this). Also make sure
+  nothing else has already published a vc ≥ 6.
+- New since vc5: the **location permission** → update the Play **Data Safety** form
+  (Approximate + Precise location, on-device weather, not shared) or Play will flag it.
+
 **Option B — command line:** provide the keystore + passwords and I can wire a
 `signingConfigs.release` block so `./gradlew bundleRelease` emits a signed AAB.
 Do NOT commit the keystore or passwords — use `~/.gradle/gradle.properties` or env
