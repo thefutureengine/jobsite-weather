@@ -343,17 +343,9 @@ html,body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--te
   *,*::before,*::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;scroll-behavior:auto!important;}
 }
 
-/* M8: light mode — dark UIs wash out in direct sun, the one place this crew works */
-@media (prefers-color-scheme: light){
-  :root{
-    --bg:#eef2f6;--surface:#ffffff;--surface2:#f4f7fa;--surface3:#e7edf3;
-    --border:rgba(10,21,32,0.16);--border2:rgba(10,21,32,0.26);
-    --text:#0a1520;--muted:rgba(10,21,32,0.78);--subtle:rgba(10,21,32,0.62);
-    --accent:#a85f00;--accent2:#8f5000;--accent-dim:rgba(168,95,0,0.12);
-  }
-  .logo{color:#ffffff;-webkit-text-stroke:1.5px var(--accent);}
-  .logo span{color:var(--accent);-webkit-text-stroke:1.5px #ffffff;}
-  .temp-display,.stat-val,.sun-val,.hr-tmp,.fc-hi,.fi-val{-webkit-text-stroke:0;text-shadow:none;}
-  .modal-overlay{background:rgba(10,21,32,0.4);}
-  .jw-toast{background:rgba(255,255,255,0.97);}
-}
+/* Light mode (M8) intentionally deferred: a correct light theme needs separate
+   tokens for accent-as-background (wants a bright accent + dark text) vs
+   accent-as-text-on-light (wants a dark accent) — one --accent can't satisfy both
+   at 4.5:1. Shipping a half-done light mode would REGRESS contrast, so it's filed
+   as a follow-up in HUMAN_TASKS rather than shipped broken. The dark theme's own
+   contrast was raised instead (--subtle 0.62, 11px floors). */
