@@ -1,3 +1,19 @@
+// ── SHARED HTML ESCAPE (audit H3) ─────────────────────────
+// Any API- or user-sourced string placed into innerHTML must pass through esc().
+// Function declaration so it is hoisted and available to every module below.
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+// Crash-proof parse of persisted state (audit H4): corrupt/truncated localStorage
+// must never throw at module load or on a hot path — return the safe default.
+function safeParse(str,fallback){try{const v=JSON.parse(str);return v==null?fallback:v;}catch(e){return fallback;}}
+// Crash-proof write (audit M6): surface quota errors instead of throwing mid-flow.
+function safeSet(key,val){try{localStorage.setItem(key,val);return true;}catch(e){if(typeof showToast==='function')showToast('Storage is full — could not save. Free up space.',3000);return false;}}
+// fetch with an abort timeout (audit M4): no network call may hang the UI forever.
+function fetchT(url,opts,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||12000);return fetch(url,Object.assign({},opts,{signal:c.signal})).finally(()=>clearTimeout(t));}
+// "Now" at the CURRENT LOCATION's wall clock, expressed in the device-local frame
+// so it compares correctly against Open-Meteo hourly times (which are location-local
+// and parsed with new Date(t)). Fixes wrong "next hours" for saved out-of-tz sites (H2).
+function locationNow(){return new Date(Date.now()+((currentData&&currentData.utc_offset_seconds||0)*1000)+new Date().getTimezoneOffset()*60000);}
+
 // auth.js — Supabase magic link auth
 const AUTH_EMAIL_KEY='jw_auth_email';
 
@@ -63,7 +79,7 @@ const MAX_CREW=3;
 const CREW_KEY='jw_crew_invites';
 
 function getCrewInvites(){try{return JSON.parse(localStorage.getItem(CREW_KEY)||'[]');}catch(e){return[];}}
-function saveCrewInvites(invites){localStorage.setItem(CREW_KEY,JSON.stringify(invites));}
+function saveCrewInvites(invites){safeSet(CREW_KEY,JSON.stringify(invites));}
 
 async function generateCrewInvite(){
   const ownerEmail=localStorage.getItem('jw_auth_email');
@@ -107,7 +123,7 @@ async function handleCrewInviteCallback(){
       if(ownerSites?.length){
         const existing=getSavedLocs();const merged=[...existing];
         ownerSites.forEach(site=>{if(!merged.find(s=>s.lat===site.lat&&s.lon===site.lon))merged.push({lat:site.lat,lon:site.lon,label:site.label,projectName:site.project_name,trade:site.trade,isShared:true,ownerEmail:data.owner_email});});
-        localStorage.setItem('jw_locs',JSON.stringify(merged));
+        safeSet('jw_locs',JSON.stringify(merged));
       }
       localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_member','true');localStorage.setItem('jw_crew_owner',data.owner_email);
       window.history.replaceState({},'',window.location.pathname);
@@ -119,7 +135,7 @@ async function handleCrewInviteCallback(){
 function renderCrewInviteList(){
   const invites=getCrewInvites();
   if(!invites.length)return'<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-bottom:8px">No crew members yet.</div>';
-  return invites.map(inv=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><div style="width:8px;height:8px;border-radius:50%;background:${inv.accepted?'#4caf50':'rgba(255,255,255,0.2)'};flex-shrink:0"></div><div style="flex:1;font-size:12px;color:${inv.accepted?'var(--text)':'var(--muted)'}">${inv.email||'Invite sent'} <span style="font-size:10px;color:rgba(255,255,255,0.3)">${inv.accepted?'· Active':'· Pending'}</span></div></div>`).join('');
+  return invites.map(inv=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><div style="width:8px;height:8px;border-radius:50%;background:${inv.accepted?'#4caf50':'rgba(255,255,255,0.2)'};flex-shrink:0"></div><div style="flex:1;font-size:12px;color:${inv.accepted?'var(--text)':'var(--muted)'}">${esc(inv.email||'Invite sent')} <span style="font-size:10px;color:rgba(255,255,255,0.3)">${inv.accepted?'· Active':'· Pending'}</span></div></div>`).join('');
 }
 
 async function handleCrewInvite(){
@@ -258,7 +274,7 @@ function activatePro(){
 }
 // ── GEO SEARCH ────────────────────────────────────────────
 async function geoSearch(q){
-  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`);
+  const r=await fetchT(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`,{},10000);
   const d=await r.json();
   if(!d.results?.length)throw new Error('Not found');
   const us=d.results.filter(x=>x.country_code==='US');
@@ -329,7 +345,7 @@ function saveCurrentLoc(){
   if(savedLocs.find(l=>l.label===currentLabel))return;
   if(savedLocs.length>=10){alert('Max 10 saved locations. Remove one first.');return;}
   savedLocs.push({label:currentLabel,lat:currentLat,lon:currentLon});
-  localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
+  safeSet('jw_locs',JSON.stringify(savedLocs));
   renderLocs();
 }
 
@@ -337,7 +353,7 @@ function removeLoc(e,i){
   e.stopPropagation();
   savedLocs.splice(i,1);
   if(activeLoc===i)activeLoc=null;
-  localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
+  safeSet('jw_locs',JSON.stringify(savedLocs));
   renderLocs();
 }
 
@@ -451,8 +467,8 @@ function buildNotesHistory(label){
 }
 
 // Legacy compat — old single-note functions used by conditions screen
-function getSiteNotes(){return JSON.parse(localStorage.getItem('jw_notes')||'{}');}
-function saveSiteNote(label,text){const notes=getSiteNotes();if(text)notes[label]=text.slice(0,500);else delete notes[label];localStorage.setItem('jw_notes',JSON.stringify(notes));}
+function getSiteNotes(){return safeParse(localStorage.getItem('jw_notes'),{});}
+function saveSiteNote(label,text){const notes=getSiteNotes();if(text)notes[label]=text.slice(0,500);else delete notes[label];safeSet('jw_notes',JSON.stringify(notes));}
 function editSiteNote(){
   if(!isPro()){showPaywall('notes');return;}
   const label=getNoteLocLabel();if(!label)return;
@@ -569,23 +585,14 @@ function getWorkabilityAllClear(){
 // ── API ────────────────────────────────────────────────────
 async function fetchWx(lat,lon){
   const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation,snowfall,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,precipitation_sum,snowfall_sum&wind_speed_unit=kmh&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7`;
-  console.log('[fetchWx] Fetching:',lat,lon);
-  try{
-    const r=await fetch(u);
-    console.log('[fetchWx] Status:',r.status,r.ok);
-    if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
-    const d=await r.json();
-    console.log('[fetchWx] Success, keys:',Object.keys(d));
-    return d;
-  }catch(e){
-    console.error('[fetchWx] FAILED:',e.name,e.message,e);
-    throw e;
-  }
+  const r=await fetchT(u,{},12000);
+  if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
+  return await r.json();
 }
 
 async function fetchNWSAlerts(lat,lon){
   try{
-    const r=await fetch(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,{headers:{Accept:'application/geo+json','User-Agent':'JobSiteWeather/1.0 (support@strickercosolutions.com)'}});
+    const r=await fetchT(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,{headers:{Accept:'application/geo+json','User-Agent':'JobSiteWeather/1.0 (support@strickercosolutions.com)'}},10000);
     if(!r.ok)return[];
     const d=await r.json();
     return(d.features||[]).map(f=>({event:f.properties.event,severity:f.properties.severity,headline:f.properties.headline,expires:f.properties.expires,urgency:f.properties.urgency}));
@@ -594,11 +601,11 @@ async function fetchNWSAlerts(lat,lon){
 
 async function fetchTomorrowForecast(lat,lon){
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/storm-forecast',{
+    const r=await fetchT('https://jobsiteweather.app/.netlify/functions/storm-forecast',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lat,lon})
-    });
+    },10000);
     const d=await r.json();
     return d.timelines?.hourly||[];
   }catch(e){return[];}
@@ -678,7 +685,7 @@ function renderAlerts(temp,windMph,precip,wmo,rh,hourly){
     checkPushAlerts(tradeAlerts,nwsAlerts);
     return;
   }
-  const future=hourly.filter(h=>h.t>new Date()).slice(0,5);
+  const future=hourly.filter(h=>h.t>locationNow()).slice(0,5);
   const idx=future.findIndex(h=>DANGER.has(h.wmo));
   if(idx>=0){
     const hrs=idx+1;
@@ -721,7 +728,7 @@ function renderConditions(el){
   const sunset=currentData.daily.sunset?.[0]?fmtTime(currentData.daily.sunset[0]):'--';
   const dirLabel=windDirLabel(windDeg);
 
-  const now2=new Date();
+  const now2=locationNow();
   const hourly=currentData.hourly.time.map((t,i)=>({
     t:new Date(t),temp:Math.round(currentData.hourly.temperature_2m[i]),
     prob:currentData.hourly.precipitation_probability[i]||0,
@@ -846,7 +853,7 @@ function renderConditions(el){
   // Site notes — show for current location (match saved loc or use currentLabel)
   const noteLocLabel=getNoteLocLabel();
   if(noteLocLabel&&isPro()){
-    const notes=JSON.parse(localStorage.getItem('jw_notes')||'{}');
+    const notes=safeParse(localStorage.getItem('jw_notes'),{});
     const note=notes[noteLocLabel]||'';
     if(note){
       el.innerHTML+=`<div class="site-note-card" id="siteNoteCard">
@@ -1118,7 +1125,7 @@ function buildConditionsContext(){
   const rh=Math.round(c.relative_humidity_2m);
   const rainPct=currentData.daily?.precipitation_probability_max?.[0]||0;
   const alerts=getTradeAlerts(temp,wind,c.precipitation||0,wmo,rh);
-  const now=new Date();
+  const now=locationNow();
   const timeStr=now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
   const sunrise=currentData.daily?.sunrise?.[0]?new Date(currentData.daily.sunrise[0]):null;
   const sunset=currentData.daily?.sunset?.[0]?new Date(currentData.daily.sunset[0]):null;
@@ -1148,13 +1155,13 @@ function buildConditionsContext(){
 
 function getRemainingForeman(){
   const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
+  const stored=safeParse(localStorage.getItem('jw_foreman_usage'),{});
   if(stored.date!==today)return 7;
   return Math.max(0,7-(stored.count||0));
 }
 function incrementForeman(){
   const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
+  const stored=safeParse(localStorage.getItem('jw_foreman_usage'),{});
   const count=stored.date===today?(stored.count||0)+1:1;
   localStorage.setItem('jw_foreman_usage',JSON.stringify({date:today,count}));
 }
@@ -1229,7 +1236,7 @@ async function submitForemanQuestion(preset){
     const rem=getRemainingForeman();
     const countDisplay=document.getElementById('foremanCount');
     if(countDisplay)countDisplay.textContent=rem+' question'+(rem===1?'':'s')+' left today';
-    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${(data.answer||'').replace(/"/g,'')}"</div></div>`;
+    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${esc(data.answer||'')}"</div></div>`;
   }catch(e){
     if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:#ff6b6b">Foreman's off the grid. Check conditions manually.</div></div>`;
   }
@@ -1250,12 +1257,12 @@ function closeForemanOverlay(e){if(e.target===document.getElementById('foremanMo
 function closeForeman(){if(!document.getElementById('foremanModal').classList.contains('open'))return;closeForemanSilent();history.back();}
 // project.js — Project Mode full workspace
 
-function getSavedLocs(){return JSON.parse(localStorage.getItem('jw_locs')||'[]');}
+function getSavedLocs(){return safeParse(localStorage.getItem('jw_locs'),[]);}
 
 function deleteLoc(lat,lon){
   let locs=getSavedLocs();
   locs=locs.filter(l=>!(Math.abs(l.lat-lat)<0.001&&Math.abs(l.lon-lon)<0.001));
-  localStorage.setItem('jw_locs',JSON.stringify(locs));
+  safeSet('jw_locs',JSON.stringify(locs));
   savedLocs=locs;
 }
 
@@ -1329,7 +1336,7 @@ async function loadProjectSites(){
   if(!sites.length){content.innerHTML=`<div style="text-align:center;padding:40px 16px"><div style="font-size:40px;margin-bottom:12px">📍</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--text);margin-bottom:8px">No job sites yet</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">Add your first site to get started.</div><button onclick="showAddSiteFlow()" style="background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:12px 24px;border:none;border-radius:var(--radius);cursor:pointer;">+ ADD FIRST SITE</button></div>`;return;}
   content.innerHTML='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase">YOUR SITES TODAY</div>';
   const siteData=await Promise.all(sites.map(async site=>{
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
+    try{const r=await fetchT(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`,{},10000);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
   }));
   // Store last checked + compute statuses for summary
   const siteStatuses=siteData.map(s=>{
@@ -1348,7 +1355,8 @@ async function loadProjectSites(){
 function buildSiteCard(site,index){
   if(!site.weatherData)return`<div style="margin:10px 16px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px"><div style="font-size:13px;color:var(--text)">${site.label}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Could not load</div></div>`;
   const c=site.weatherData.current,temp=Math.round(c.temperature_2m),wind=Math.round(c.wind_speed_10m),wmo=c.weather_code,rh=Math.round(c.relative_humidity_2m),precip=c.precipitation||0;
-  const rainPct=site.weatherData.hourly?.precipitation_probability?Math.max(...site.weatherData.hourly.precipitation_probability.slice(0,12)):0;
+  const _pp=(site.weatherData.hourly?.precipitation_probability||[]).slice(0,12).filter(v=>typeof v==='number');
+  const rainPct=_pp.length?Math.max(..._pp):0;
   const alerts=getTradeAlerts(temp,wind,precip,wmo,rh);
   const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
   const status=hasDanger?'HOLD':hasCaution?'CAUTION':'GO';
@@ -1364,7 +1372,7 @@ function buildSiteCard(site,index){
   return`<div id="pmCard_${index}" style="margin:10px 16px;background:var(--surface3);border:1px solid ${borderColor};border-radius:var(--radius);overflow:hidden">
     <div onclick="toggleSiteCard(${index})" style="padding:14px;cursor:pointer;display:flex;align-items:center;gap:12px">
       <div class="pm-status-dot" style="background:${statusColor}"></div>
-      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${site.projectName||site.label}${(()=>{const n=typeof loadNotesForSite==='function'?loadNotesForSite(site.label).length:0;return n?`<span style="font-size:10px;color:rgba(245,166,35,0.6);margin-left:6px">${n} note${n>1?'s':''}</span>`:''})()}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${site.label}${site.trade?' · '+(TRADE_CONFIG[site.trade]?.name||site.trade):''} · <span style="font-size:9px;color:rgba(255,255,255,0.2)">${(()=>{const lc=localStorage.getItem('jw_site_checked_'+site.label);if(!lc)return'not checked';const m=Math.round((Date.now()-parseInt(lc))/60000);return m<60?m+'m ago':Math.round(m/60)+'h ago';})()}</span></div></div>
+      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${esc(site.projectName||site.label)}${(()=>{const n=typeof loadNotesForSite==='function'?loadNotesForSite(site.label).length:0;return n?`<span style="font-size:10px;color:rgba(245,166,35,0.6);margin-left:6px">${n} note${n>1?'s':''}</span>`:''})()}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${esc(site.label)}${site.trade?' · '+esc(TRADE_CONFIG[site.trade]?.name||site.trade):''} · <span style="font-size:9px;color:rgba(255,255,255,0.2)">${(()=>{const lc=localStorage.getItem('jw_site_checked_'+site.label);if(!lc)return'not checked';const m=Math.round((Date.now()-parseInt(lc))/60000);return m<60?m+'m ago':Math.round(m/60)+'h ago';})()}</span></div></div>
       <div style="text-align:right;flex-shrink:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:${statusColor}">${status}</div><div class="pm-data-label">${temp}°F · ${wind}mph</div></div>
       <div style="color:rgba(255,255,255,0.2);font-size:14px;flex-shrink:0" id="pmChevron_${index}">▼</div>
     </div>
@@ -1428,7 +1436,7 @@ function confirmDeleteSite(label){
   if(!confirm('Remove '+label+'?'))return;
   let locs=getSavedLocs();
   locs=locs.filter(l=>l.label!==label);
-  localStorage.setItem('jw_locs',JSON.stringify(locs));
+  safeSet('jw_locs',JSON.stringify(locs));
   savedLocs=locs;
   loadProjectSites();
 }
@@ -1451,7 +1459,7 @@ function saveSiteMeta(label){
   site.trade=document.getElementById('editTrade')?.value||'general';
   site.gcContact=document.getElementById('editGCContact')?.value?.trim()||'';
   site.crewSize=document.getElementById('editCrewSize')?.value||'';
-  localStorage.setItem('jw_locs',JSON.stringify(sites));savedLocs=sites;
+  safeSet('jw_locs',JSON.stringify(sites));savedLocs=sites;
   loadProjectSites();
 }
 
@@ -1487,7 +1495,7 @@ function confirmAddSite(lat,lon,label){
   const maxLocs=isProject()?10:isCrew()?5:isPro()?5:1;
   if(sites.length>=maxLocs){alert('You\'ve reached your '+maxLocs+' site limit.');return;}
   sites.push({lat,lon,label,projectName:document.getElementById('newProjectName')?.value?.trim()||'',trade:document.getElementById('newTrade')?.value||'general',gcContact:document.getElementById('newGCContact')?.value?.trim()||''});
-  localStorage.setItem('jw_locs',JSON.stringify(sites));savedLocs=sites;
+  safeSet('jw_locs',JSON.stringify(sites));savedLocs=sites;
   loadProjectSites();
 }
 
@@ -1498,14 +1506,14 @@ async function loadProjectCalendar(){
   const sites=getSavedLocs();
   if(!sites.length){content.innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted)">No sites added yet</div>';return;}
   const forecasts=await Promise.all(sites.map(async s=>{
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_probability_max,weathercode,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...s,forecast:(await r.json()).daily};}catch(e){return{...s,forecast:null};}
+    try{const r=await fetchT(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_probability_max,weathercode,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`,{},10000);return{...s,forecast:(await r.json()).daily};}catch(e){return{...s,forecast:null};}
   }));
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const today=new Date();
   let html='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">7-DAY WORKABILITY</div>';
   html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:0 16px;margin-bottom:4px"><div></div>${Array.from({length:7},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()+i);return`<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.05em">${i===0?'TODAY':days[d.getDay()]}</div>`;}).join('')}</div>`;
   forecasts.forEach(site=>{
     if(!site.forecast)return;
-    html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:4px 16px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${site.projectName||site.label.split(',')[0]}</div>${(site.forecast.weathercode||[]).slice(0,7).map((wmo,i)=>{
+    html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:4px 16px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${esc(site.projectName||site.label.split(',')[0])}</div>${(site.forecast.weathercode||[]).slice(0,7).map((wmo,i)=>{
       const precip=site.forecast.precipitation_probability_max[i]||0;const wind=site.forecast.wind_speed_10m_max[i]||0;const tempMax=site.forecast.temperature_2m_max[i]||50;
       const alerts=getTradeAlerts(tempMax,wind,precip>50?0.5:0,wmo,50);
       const bad=alerts.some(a=>a.level==='danger')||precip>70;const warn=alerts.some(a=>a.level==='caution')||precip>40;
@@ -1849,12 +1857,12 @@ const TRADE_CONFIG={
 
 // ── STATE ──────────────────────────────────────────────────
 let currentData=null,currentLabel='',currentLat=null,currentLon=null;
-let savedLocs=JSON.parse(localStorage.getItem('jw_locs')||'[]');
+let savedLocs=safeParse(localStorage.getItem('jw_locs'),[]);
 let activeLoc=null,currentTrade='general',nwsAlerts=[];
 let activeTab='conditions';
 let tomorrowHourly=[];
 let currentDayIndex=null;
-let notifySettings=JSON.parse(localStorage.getItem('jw_notify')||'{"severe":true,"wind":false,"rain":false}');
+let notifySettings=safeParse(localStorage.getItem('jw_notify'),{severe:true,wind:false,rain:false});
 
 // ── UTILS ──────────────────────────────────────────────────
 const kmh2mph=k=>Math.round(k*0.621371);
