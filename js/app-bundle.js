@@ -764,7 +764,7 @@ function renderConditions(el){
     const statusDot=`<div class="dot ${dotClass(hrStatuses[i])}" style="margin:0 auto 4px"></div>`;
     const isDaylight=sunriseTime&&sunsetTime&&h.t>sunriseTime&&h.t<sunsetTime;
     const uvLine=isDaylight&&h.uv>0?`<div style="font-size:9px;color:${h.uv<=2?'rgba(255,255,255,0.4)':h.uv<=5?'#f5a623':h.uv<=7?'#ff9800':'#e53935'}">UV ${h.uv}</div>`:'';
-    return`<div class="hr-item ${cls}">${statusDot}<div class="hr-time">${fmt}</div><div class="hr-ico">${ICO[h.wmo]||'☁️'}</div><div class="hr-tmp">${h.temp}°</div>${precipLine}<div class="hr-wind">${h.wind}mph</div>${uvLine}</div>`;
+    return`<div class="hr-item ${cls}">${statusDot}<div class="hr-time">${fmt}</div><div class="hr-ico">${wxIcon(h.wmo,!isDaylight)}</div><div class="hr-tmp">${h.temp}°</div>${precipLine}<div class="hr-wind">${h.wind}mph</div>${uvLine}</div>`;
   }).join('');
 
   // Workability 10hr lookahead
@@ -804,7 +804,7 @@ function renderConditions(el){
       <div class="city">${currentLabel}</div>
       <div class="hero-main">
         <div><span class="temp-display">${temp}</span><span class="temp-unit">°F</span></div>
-        <div class="wx-icon">${ICO[wmo]||'☁️'}</div>
+        <div class="wx-icon">${wxIcon(wmo,sunriseTime&&sunsetTime?!(now2>sunriseTime&&now2<sunsetTime):false)}</div>
       </div>
       <div class="condition-row">${WMO[wmo]||'Unknown'}</div>
       <div class="feels">Feels like ${feels}°F &nbsp;·&nbsp; ${rh}% humidity</div>
@@ -1030,12 +1030,15 @@ function openDayModal(dayIndex,skipNav){
     wind:kmh2mph(Math.round(currentData.hourly.wind_speed_10m[i]))
   })).filter(h=>h.t>=dayStart&&h.t<=dayEnd);
 
+  const daySunrise=daily.sunrise?.[dayIndex]?new Date(daily.sunrise[dayIndex]):null;
+  const daySunset=daily.sunset?.[dayIndex]?new Date(daily.sunset[dayIndex]):null;
   const hourlyHTML=dayHours.map(h=>{
     const fmt=h.t.toLocaleTimeString([],{hour:'numeric',hour12:true});
     const isDanger=DANGER.has(h.wmo),isWarn=WARN.has(h.wmo);
+    const night=daySunrise&&daySunset?!(h.t>daySunrise&&h.t<daySunset):false;
     return`<div class="dh-item${isDanger?' danger-hr':isWarn?' alert-hr':''}">
       <div class="dh-time">${fmt}</div>
-      <div class="dh-ico">${ICO[h.wmo]||'☁️'}</div>
+      <div class="dh-ico">${wxIcon(h.wmo,night)}</div>
       <div class="dh-tmp">${h.temp}°</div>
       ${h.prob>10?`<div class="dh-pct">${h.prob}%</div>`:''}
       <div class="dh-wind">${h.wind}mph</div>
@@ -1828,6 +1831,10 @@ try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){}
 // ── CONSTANTS ──────────────────────────────────────────────
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Severe storm'};
 const ICO={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+// Night variants for the sun-implying codes (clear / mostly clear / partly cloudy).
+// After sunset until sunrise these replace the daytime glyph.
+const NIGHT_ICO={0:'🌙',1:'🌙',2:'☁️'};
+function wxIcon(wmo,night){return night&&NIGHT_ICO[wmo]!==undefined?NIGHT_ICO[wmo]:(ICO[wmo]||'☁️');}
 const DANGER=new Set([65,75,82,85,86,95,96,99]);
 const WARN=new Set([55,63,71,73,80,81]);
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
