@@ -23,7 +23,7 @@
 <link rel="manifest" href="/manifest.json"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="preload" href="/js/app-bundle.js" as="script"/>
 <link rel="preload" href="/css/app.css" as="style"/>
 <script src="/js/vendor/supabase.min.js" defer></script>
@@ -44,7 +44,7 @@
       <div class="byline">Built for the trades</div>
     </div>
     <div class="topbar-right">
-      <button class="notify-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙</button>
+      <button class="notify-btn" id="settingsBtn" onclick="openSettings()" title="Settings" aria-label="Settings">⚙</button>
       <div class="by-label">by StrickerCo</div>
     </div>
   </div>
@@ -52,11 +52,11 @@
   <div class="search-wrap">
     <div class="search-row">
       <input type="text" id="locInput" placeholder="ZIP code or city" aria-label="Search by ZIP code or city" autocomplete="off" autocorrect="off" spellcheck="false"/>
-      <button class="btn" onclick="doSearch()">Go</button>
-      <button class="btn btn-ghost" onclick="useGPS()">📍 GPS</button>
+      <button class="btn" onclick="doSearch()" aria-label="Search">Go</button>
+      <button class="btn btn-ghost" onclick="useGPS()" aria-label="Use my GPS location">📍 GPS</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <select id="tradeSelect" onchange="onTradeChange()" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;-webkit-appearance:none;appearance:none;">
+      <select id="tradeSelect" onchange="onTradeChange()" aria-label="Select your trade" style="flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;color:var(--text);font-family:'Barlow',sans-serif;">
         <option value="general">General / All Trades</option>
         <option value="architect">Architect / Designer</option>
         <option value="concrete">Concrete / Masonry</option>
@@ -79,15 +79,15 @@
     </div>
   </div>
 
-  <div class="locs-row" id="locsRow"></div>
-  <div id="alertBanner" class="alert"></div>
-  <div id="nwsAlerts"></div>
+  <div class="locs-row" id="locsRow" aria-label="Saved job sites"></div>
+  <div id="alertBanner" class="alert" role="status" aria-live="polite"></div>
+  <div id="nwsAlerts" aria-live="assertive"></div>
 
   <!-- NAV TABS -->
-  <div class="nav-tabs" id="navTabs" style="display:none;">
-    <button class="nav-tab active" onclick="switchTab('conditions')" id="tab-conditions">CONDITIONS</button>
-    <button class="nav-tab" onclick="switchTab('forecast')" id="tab-forecast">FORECAST</button>
-    <button class="nav-tab" onclick="switchTab('foreman')" id="tab-foreman">👷 FOREMAN</button>
+  <div class="nav-tabs" id="navTabs" role="tablist" aria-label="Weather views" style="display:none;">
+    <button class="nav-tab active" onclick="switchTab('conditions')" id="tab-conditions" role="tab" aria-selected="true">CONDITIONS</button>
+    <button class="nav-tab" onclick="switchTab('forecast')" id="tab-forecast" role="tab" aria-selected="false">FORECAST</button>
+    <button class="nav-tab" onclick="switchTab('foreman')" id="tab-foreman" role="tab" aria-selected="false">👷 FOREMAN</button>
   </div>
 
   <div id="content"><div class="loading">Locating you</div></div>
@@ -97,7 +97,7 @@
 
 <!-- DAY MODAL -->
 <div class="modal-overlay" id="dayModal" onclick="closeModal(event)">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Day forecast detail">
     <div class="modal-handle"></div>
     <div id="modalInner"></div>
   </div>
@@ -105,7 +105,7 @@
 
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="settingsModal" onclick="closeSettingsOverlay(event)">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="modal-handle"></div>
     <div id="settingsInner"></div>
   </div>
@@ -113,14 +113,14 @@
 
 <!-- FOREMAN MODAL -->
 <div class="modal-overlay" id="foremanModal" onclick="closeForemanOverlay(event)">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Ask the Foreman">
     <div class="modal-handle"></div>
     <div id="foremanInner"></div>
   </div>
 </div>
 
 <!-- TOAST -->
-<div id="toastContainer"></div>
+<div id="toastContainer" role="status" aria-live="polite"></div>
 
 <script src="/js/app-bundle.js" defer></script>
 </body>

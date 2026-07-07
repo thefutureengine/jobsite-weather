@@ -482,16 +482,6 @@ function deleteSiteNote(){const label=getNoteLocLabel();if(!label)return;saveSit
 function getOrCreateDeviceId(){let id=localStorage.getItem('jw_device_id');if(!id){id=crypto.randomUUID();localStorage.setItem('jw_device_id',id);}return id;}
 
 // ── SUPABASE NOTES ────────────────────────────────────────
-async function saveNoteToSupabase(siteLabel,noteText){
-  if(!sb)return false;
-  const userKey=localStorage.getItem('jw_restore_email')||getOrCreateDeviceId();
-  try{const{error}=await sb.from('jw_notes').insert({user_key:userKey,site_id:null,note:noteText});return!error;}catch(e){return false;}
-}
-async function loadNotesFromSupabase(){
-  if(!sb)return null;
-  const userKey=localStorage.getItem('jw_restore_email')||getOrCreateDeviceId();
-  try{const{data,error}=await sb.from('jw_notes').select('note,created_at').eq('user_key',userKey).order('created_at',{ascending:false}).limit(20);if(error||!data?.length)return null;return data;}catch(e){return null;}
-}
 // ── TRADE ALERTS ──────────────────────────────────────────
 function getTradeAlerts(temp,windMph,precip,wmo,rh){
   const trade=TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general;
@@ -1233,11 +1223,6 @@ async function submitForemanQuestion(preset){
   if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:var(--muted)">Foreman's thinking...</div></div>`;
 
   const style=localStorage.getItem('jw_foreman_style')||'shooter';
-  const styleInstructions={
-    shooter:'Be direct and blunt. No fluff. Real numbers, real advice. Brief.',
-    light:'Be direct but add dry jobsite humor. Keep it real but make them smile.',
-    facts:'Be purely factual. Numbers and times only, minimal commentary.'
-  };
   const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
 
   try{
@@ -1275,12 +1260,6 @@ function closeForeman(){if(!document.getElementById('foremanModal').classList.co
 
 function getSavedLocs(){return safeParse(localStorage.getItem('jw_locs'),[]);}
 
-function deleteLoc(lat,lon){
-  let locs=getSavedLocs();
-  locs=locs.filter(l=>!(Math.abs(l.lat-lat)<0.001&&Math.abs(l.lon-lon)<0.001));
-  safeSet('jw_locs',JSON.stringify(locs));
-  savedLocs=locs;
-}
 
 function updateProjectPill(){
   const pill=document.getElementById('projectPill');
@@ -1844,7 +1823,7 @@ function scheduleMorningBriefing(){
 const SUPABASE_URL='https://jfpyrlregzwmvltrhgfq.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmcHlybHJlZ3p3bXZsdHJoZ2ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzcyOTMsImV4cCI6MjA5MDgxMzI5M30.YDLYIk4n6X7mBYYpk5fkEe0MeS3KqrB4wDhcwmD5iKs';
 let sb=null;
-try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);console.log('[Supabase] Client initialized');}catch(e){console.warn('[Supabase] Init failed, running without:',e.message);}
+try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){}
 
 // ── CONSTANTS ──────────────────────────────────────────────
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Severe storm'};
@@ -1919,7 +1898,8 @@ window.addEventListener('popstate',()=>{
   } else if(activeTab!=='conditions'){
     activeTab='conditions';
     ['conditions','forecast','foreman'].forEach(t=>{
-      document.getElementById('tab-'+t)?.classList.toggle('active',t==='conditions');
+      const el=document.getElementById('tab-'+t);
+      if(el){el.classList.toggle('active',t==='conditions');el.setAttribute('aria-selected',String(t==='conditions'));}
     });
     renderCurrentTab();
   }
@@ -1930,7 +1910,8 @@ function switchTab(tab){
   if(tab!=='conditions'&&activeTab==='conditions')navPush('tab');
   activeTab=tab;
   ['conditions','forecast','foreman'].forEach(t=>{
-    document.getElementById('tab-'+t)?.classList.toggle('active',t===tab);
+    const el=document.getElementById('tab-'+t);
+    if(el){el.classList.toggle('active',t===tab);el.setAttribute('aria-selected',String(t===tab));}
   });
   renderCurrentTab();
 }
