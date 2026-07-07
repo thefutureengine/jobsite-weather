@@ -1,3 +1,19 @@
+// ── SHARED HTML ESCAPE (audit H3) ─────────────────────────
+// Any API- or user-sourced string placed into innerHTML must pass through esc().
+// Function declaration so it is hoisted and available to every module below.
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+// Crash-proof parse of persisted state (audit H4): corrupt/truncated localStorage
+// must never throw at module load or on a hot path — return the safe default.
+function safeParse(str,fallback){try{const v=JSON.parse(str);return v==null?fallback:v;}catch(e){return fallback;}}
+// Crash-proof write (audit M6): surface quota errors instead of throwing mid-flow.
+function safeSet(key,val){try{localStorage.setItem(key,val);return true;}catch(e){if(typeof showToast==='function')showToast('Storage is full — could not save. Free up space.',3000);return false;}}
+// fetch with an abort timeout (audit M4): no network call may hang the UI forever.
+function fetchT(url,opts,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||12000);return fetch(url,Object.assign({},opts,{signal:c.signal})).finally(()=>clearTimeout(t));}
+// "Now" at the CURRENT LOCATION's wall clock, expressed in the device-local frame
+// so it compares correctly against Open-Meteo hourly times (which are location-local
+// and parsed with new Date(t)). Fixes wrong "next hours" for saved out-of-tz sites (H2).
+function locationNow(){return new Date(Date.now()+((currentData&&currentData.utc_offset_seconds||0)*1000)+new Date().getTimezoneOffset()*60000);}
+
 // auth.js — Supabase magic link auth
 const AUTH_EMAIL_KEY='jw_auth_email';
 
@@ -33,7 +49,7 @@ async function handleAuthCallback(){
       const email=data.session.user.email;
       if(email){
         try{
-          const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+          const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+data.session.access_token},body:JSON.stringify({})});
           const d=await r.json();
           if(d.success){
             localStorage.setItem('jw_pro','true');
@@ -63,7 +79,7 @@ const MAX_CREW=3;
 const CREW_KEY='jw_crew_invites';
 
 function getCrewInvites(){try{return JSON.parse(localStorage.getItem(CREW_KEY)||'[]');}catch(e){return[];}}
-function saveCrewInvites(invites){localStorage.setItem(CREW_KEY,JSON.stringify(invites));}
+function saveCrewInvites(invites){safeSet(CREW_KEY,JSON.stringify(invites));}
 
 async function generateCrewInvite(){
   const ownerEmail=localStorage.getItem('jw_auth_email');
@@ -107,7 +123,7 @@ async function handleCrewInviteCallback(){
       if(ownerSites?.length){
         const existing=getSavedLocs();const merged=[...existing];
         ownerSites.forEach(site=>{if(!merged.find(s=>s.lat===site.lat&&s.lon===site.lon))merged.push({lat:site.lat,lon:site.lon,label:site.label,projectName:site.project_name,trade:site.trade,isShared:true,ownerEmail:data.owner_email});});
-        localStorage.setItem('jw_locs',JSON.stringify(merged));
+        safeSet('jw_locs',JSON.stringify(merged));
       }
       localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_member','true');localStorage.setItem('jw_crew_owner',data.owner_email);
       window.history.replaceState({},'',window.location.pathname);
@@ -119,7 +135,7 @@ async function handleCrewInviteCallback(){
 function renderCrewInviteList(){
   const invites=getCrewInvites();
   if(!invites.length)return'<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-bottom:8px">No crew members yet.</div>';
-  return invites.map(inv=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><div style="width:8px;height:8px;border-radius:50%;background:${inv.accepted?'#4caf50':'rgba(255,255,255,0.2)'};flex-shrink:0"></div><div style="flex:1;font-size:12px;color:${inv.accepted?'var(--text)':'var(--muted)'}">${inv.email||'Invite sent'} <span style="font-size:10px;color:rgba(255,255,255,0.3)">${inv.accepted?'· Active':'· Pending'}</span></div></div>`).join('');
+  return invites.map(inv=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><div style="width:8px;height:8px;border-radius:50%;background:${inv.accepted?'#4caf50':'rgba(255,255,255,0.2)'};flex-shrink:0"></div><div style="flex:1;font-size:12px;color:${inv.accepted?'var(--text)':'var(--muted)'}">${esc(inv.email||'Invite sent')} <span style="font-size:10px;color:rgba(255,255,255,0.3)">${inv.accepted?'· Active':'· Pending'}</span></div></div>`).join('');
 }
 
 async function handleCrewInvite(){
@@ -189,7 +205,7 @@ function showTrialToast(){
   let msg='';
   if(d>=25)msg='Pro trial · Ask the Foreman is yours — 7 questions a day';
   else if(d>=15)msg=`Pro trial · ${d} days left · Saved locations & job notes included`;
-  else if(d>=7)msg=`Pro trial · ${d} days left · 5AM morning briefing is on`;
+  else if(d>=7)msg=`Pro trial · ${d} days left · morning briefing is on`;
   else if(d>=3)msg=`Pro trial · ${d} days left · You've wasted more than $4.99 on bad weather calls`;
   else if(d===2)msg='Pro trial ends in 2 days · $4.99 keeps everything';
   else if(d===1)msg='Last day of trial · $4.99/year · No ads. Ever.';
@@ -219,7 +235,7 @@ function showPaywall(feature){
       </div>
       <div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:1rem;text-align:left">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Pro includes</div>
-        ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved job site locations','📝 Job site notes','🌅 5AM morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text)">${f}</div>`).join('')}
+        ${['🔨 Ask the Foreman — 7 questions/day','📍 Saved job site locations','📝 Job site notes','🌅 Morning briefing','⭐ Founding Crew — Crew Mode free at launch'].map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text)">${f}</div>`).join('')}
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--accent);margin-bottom:4px">$4.99/year</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:1.25rem">No ads. Ever.</div>
@@ -258,7 +274,7 @@ function activatePro(){
 }
 // ── GEO SEARCH ────────────────────────────────────────────
 async function geoSearch(q){
-  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`);
+  const r=await fetchT(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`,{},10000);
   const d=await r.json();
   if(!d.results?.length)throw new Error('Not found');
   const us=d.results.filter(x=>x.country_code==='US');
@@ -329,7 +345,7 @@ function saveCurrentLoc(){
   if(savedLocs.find(l=>l.label===currentLabel))return;
   if(savedLocs.length>=10){alert('Max 10 saved locations. Remove one first.');return;}
   savedLocs.push({label:currentLabel,lat:currentLat,lon:currentLon});
-  localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
+  safeSet('jw_locs',JSON.stringify(savedLocs));
   renderLocs();
 }
 
@@ -337,7 +353,7 @@ function removeLoc(e,i){
   e.stopPropagation();
   savedLocs.splice(i,1);
   if(activeLoc===i)activeLoc=null;
-  localStorage.setItem('jw_locs',JSON.stringify(savedLocs));
+  safeSet('jw_locs',JSON.stringify(savedLocs));
   renderLocs();
 }
 
@@ -375,22 +391,19 @@ async function loadByLatLon(lat,lon,label){
 
 async function doSearch(){
   const raw=document.getElementById('locInput').value.trim();
-  const cleaned=raw.replace(/\D/g,'').slice(0,5);
-  if(!cleaned||cleaned.length<5){
-    document.getElementById('content').innerHTML='<div class="error-state">Please enter a valid 5-digit ZIP code.</div>';
-    return;
-  }
+  if(!raw){document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code or city name.</div>';return;}
+  // M10: accept a ZIP (pure digits) OR a city name ("Austin, TX", "Denver").
+  const query=/^\d{3,}$/.test(raw)?raw.replace(/\D/g,'').slice(0,5):raw;
   document.getElementById('content').innerHTML='<div class="loading">Searching</div>';
   clearAlert();
   try{
-    const geo=await geoSearch(cleaned);
+    const geo=await geoSearch(query);
     const label=geo.name+(geo.admin1?', '+geo.admin1:'');
     document.getElementById('locInput').value=label;
     activeLoc=null;
     await loadByLatLon(geo.latitude,geo.longitude,label);
   }catch(e){
-    console.error('Search error:',e);
-    document.getElementById('content').innerHTML='<div class="error-state">ZIP not found. Try a valid 5-digit US ZIP code.</div>';
+    document.getElementById('content').innerHTML='<div class="error-state">Location not found. Try a ZIP code or a city like "Austin, TX".</div>';
   }
 }
 
@@ -400,7 +413,8 @@ function useGPS(){
   clearAlert();
   navigator.geolocation.getCurrentPosition(
     async pos=>{const{latitude:lat,longitude:lon}=pos.coords;document.getElementById('locInput').value='';activeLoc=null;await loadByLatLon(lat,lon,'Your location');},
-    ()=>{document.getElementById('content').innerHTML='<div class="error-state">Location access denied. Enter a city or ZIP above.</div>';}
+    err=>{const denied=err&&err.code===1;document.getElementById('content').innerHTML=`<div class="error-state">${denied?'Location access denied.':'Could not get a location fix (timed out).'} Enter a city or ZIP above.</div>`;},
+    {enableHighAccuracy:false,timeout:10000,maximumAge:600000}
   );
 }
 
@@ -450,8 +464,8 @@ function buildNotesHistory(label){
 }
 
 // Legacy compat — old single-note functions used by conditions screen
-function getSiteNotes(){return JSON.parse(localStorage.getItem('jw_notes')||'{}');}
-function saveSiteNote(label,text){const notes=getSiteNotes();if(text)notes[label]=text.slice(0,500);else delete notes[label];localStorage.setItem('jw_notes',JSON.stringify(notes));}
+function getSiteNotes(){return safeParse(localStorage.getItem('jw_notes'),{});}
+function saveSiteNote(label,text){const notes=getSiteNotes();if(text)notes[label]=text.slice(0,500);else delete notes[label];safeSet('jw_notes',JSON.stringify(notes));}
 function editSiteNote(){
   if(!isPro()){showPaywall('notes');return;}
   const label=getNoteLocLabel();if(!label)return;
@@ -468,16 +482,6 @@ function deleteSiteNote(){const label=getNoteLocLabel();if(!label)return;saveSit
 function getOrCreateDeviceId(){let id=localStorage.getItem('jw_device_id');if(!id){id=crypto.randomUUID();localStorage.setItem('jw_device_id',id);}return id;}
 
 // ── SUPABASE NOTES ────────────────────────────────────────
-async function saveNoteToSupabase(siteLabel,noteText){
-  if(!sb)return false;
-  const userKey=localStorage.getItem('jw_restore_email')||getOrCreateDeviceId();
-  try{const{error}=await sb.from('jw_notes').insert({user_key:userKey,site_id:null,note:noteText});return!error;}catch(e){return false;}
-}
-async function loadNotesFromSupabase(){
-  if(!sb)return null;
-  const userKey=localStorage.getItem('jw_restore_email')||getOrCreateDeviceId();
-  try{const{data,error}=await sb.from('jw_notes').select('note,created_at').eq('user_key',userKey).order('created_at',{ascending:false}).limit(20);if(error||!data?.length)return null;return data;}catch(e){return null;}
-}
 // ── TRADE ALERTS ──────────────────────────────────────────
 function getTradeAlerts(temp,windMph,precip,wmo,rh){
   const trade=TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general;
@@ -568,23 +572,16 @@ function getWorkabilityAllClear(){
 // ── API ────────────────────────────────────────────────────
 async function fetchWx(lat,lon){
   const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,precipitation,snowfall,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,precipitation_sum,snowfall_sum&wind_speed_unit=kmh&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7`;
-  console.log('[fetchWx] Fetching:',lat,lon);
-  try{
-    const r=await fetch(u);
-    console.log('[fetchWx] Status:',r.status,r.ok);
-    if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
-    const d=await r.json();
-    console.log('[fetchWx] Success, keys:',Object.keys(d));
-    return d;
-  }catch(e){
-    console.error('[fetchWx] FAILED:',e.name,e.message,e);
-    throw e;
-  }
+  const r=await fetchT(u,{},12000);
+  if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);
+  return await r.json();
 }
 
 async function fetchNWSAlerts(lat,lon){
   try{
-    const r=await fetch(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,{headers:{Accept:'application/geo+json','User-Agent':'JobSiteWeather/1.0 (support@strickercosolutions.com)'}});
+    const r=await fetchT(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,{headers:{Accept:'application/geo+json','User-Agent':'JobSiteWeather/1.0 (support@strickercosolutions.com)'}},10000);
+    // api.weather.gov returns 4xx for points outside US coverage — flag it (M10).
+    nwsOutOfCoverage=(r.status>=400&&r.status<500);
     if(!r.ok)return[];
     const d=await r.json();
     return(d.features||[]).map(f=>({event:f.properties.event,severity:f.properties.severity,headline:f.properties.headline,expires:f.properties.expires,urgency:f.properties.urgency}));
@@ -593,11 +590,11 @@ async function fetchNWSAlerts(lat,lon){
 
 async function fetchTomorrowForecast(lat,lon){
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/storm-forecast',{
+    const r=await fetchT('https://jobsiteweather.app/.netlify/functions/storm-forecast',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lat,lon})
-    });
+    },10000);
     const d=await r.json();
     return d.timelines?.hourly||[];
   }catch(e){return[];}
@@ -616,28 +613,43 @@ function getDismissedAlerts(){
 }
 function dismissAlert(event){
   const list=getDismissedAlerts();
-  if(!list.includes(event)){list.push(event);sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}
+  if(!list.includes(event)){list.push(event);try{sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}catch(e){}}
+}
+// M9: a severe alert must never vanish permanently from an accidental glove-swipe.
+let lastDismissedNWS=null;
+let nwsOutOfCoverage=false;
+function undoLastNWS(){
+  if(!lastDismissedNWS)return;
+  const ev=lastDismissedNWS;lastDismissedNWS=null;
+  try{const list=getDismissedAlerts().filter(e=>e!==ev);sessionStorage.setItem('jw_dismissed_alerts',JSON.stringify(list));}catch(e){}
+  renderNWSAlerts(nwsAlerts);
+}
+function offerUndoNWS(card){
+  if(card&&card.classList.contains('nws-severe')){
+    lastDismissedNWS=card.dataset.event;
+    if(typeof showToast==='function')showToast('Severe alert hidden. <span onclick="undoLastNWS()" style="color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline">UNDO</span>',6000);
+  }
 }
 
 function renderNWSAlerts(alerts){
   const wrap=document.getElementById('nwsAlerts');
-  if(!alerts?.length){wrap.innerHTML='';return;}
+  // M10: NWS covers the US only — say so for out-of-coverage (non-US) locations.
+  const note=nwsOutOfCoverage?`<div style="padding:8px 16px 0"><div style="font-size:11px;color:var(--muted);line-height:1.5">ℹ️ Severe-weather alerts cover the US only. Current conditions and the 7-day forecast still work here.</div></div>`:'';
   const dismissed=getDismissedAlerts();
-  const visible=alerts.filter(a=>!dismissed.includes(a.event)).slice(0,3);
-  if(!visible.length){wrap.innerHTML='';return;}
+  const visible=(alerts||[]).filter(a=>!dismissed.includes(a.event)).slice(0,3);
+  if(!visible.length){wrap.innerHTML=note;return;}
   const SEVERE=new Set(['Tornado Warning','Tornado Watch','Severe Thunderstorm Warning','Severe Thunderstorm Watch','Flash Flood Warning','Flash Flood Watch','Blizzard Warning','Ice Storm Warning','Winter Storm Warning','Extreme Wind Warning','Hurricane Warning','Tropical Storm Warning']);
   const html=visible.map(a=>{
     const isSev=SEVERE.has(a.event)||a.severity==='Extreme'||a.urgency==='Immediate';
     const exp=a.expires?new Date(a.expires).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-    const safeEvent=a.event.replace(/'/g,"\\'");
-    return`<div class="nws-alert ${isSev?'nws-severe':'nws-moderate'}" data-event="${a.event.replace(/"/g,'&quot;')}">
-      <button class="nws-dismiss" onclick="dismissNWSAlert(this)" title="Dismiss">×</button>
-      <div class="nws-event">${isSev?'⚠ ':''}${a.event}</div>
-      <div class="nws-headline">${a.headline||''}</div>
-      ${exp?`<div class="nws-exp">Until ${exp}</div>`:''}
+    return`<div class="nws-alert ${isSev?'nws-severe':'nws-moderate'}" data-event="${esc(a.event)}" role="alert">
+      <button class="nws-dismiss" onclick="dismissNWSAlert(this)" title="Dismiss" aria-label="Dismiss ${esc(a.event)} alert">×</button>
+      <div class="nws-event">${isSev?'⚠ ':''}${esc(a.event)}</div>
+      <div class="nws-headline">${esc(a.headline||'')}</div>
+      ${exp?`<div class="nws-exp">Until ${esc(exp)}</div>`:''}
     </div>`;
   }).join('');
-  wrap.innerHTML=`<div style="padding:0 16px;margin-top:8px">${html}</div>`;
+  wrap.innerHTML=`<div style="padding:0 16px;margin-top:8px">${html}</div>`+note;
   // Wire swipe-to-dismiss on each card
   wrap.querySelectorAll('.nws-alert').forEach(card=>{
     let sx=0,sy=0;
@@ -654,7 +666,8 @@ function renderNWSAlerts(alerts){
         card.classList.add('dismissed');
         const event=card.dataset.event;
         dismissAlert(event);
-        setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML='';},250);
+        offerUndoNWS(card);
+        setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML=note;},250);
       } else {card.style.transform='';card.style.opacity='';}
     },{passive:true});
   });
@@ -665,6 +678,7 @@ function dismissNWSAlert(btn){
   if(!card)return;
   card.classList.add('dismissed');
   dismissAlert(card.dataset.event);
+  offerUndoNWS(card);
   const wrap=document.getElementById('nwsAlerts');
   setTimeout(()=>{card.remove();if(!wrap.querySelector('.nws-alert'))wrap.innerHTML='';},250);
 }
@@ -677,7 +691,7 @@ function renderAlerts(temp,windMph,precip,wmo,rh,hourly){
     checkPushAlerts(tradeAlerts,nwsAlerts);
     return;
   }
-  const future=hourly.filter(h=>h.t>new Date()).slice(0,5);
+  const future=hourly.filter(h=>h.t>locationNow()).slice(0,5);
   const idx=future.findIndex(h=>DANGER.has(h.wmo));
   if(idx>=0){
     const hrs=idx+1;
@@ -720,7 +734,7 @@ function renderConditions(el){
   const sunset=currentData.daily.sunset?.[0]?fmtTime(currentData.daily.sunset[0]):'--';
   const dirLabel=windDirLabel(windDeg);
 
-  const now2=new Date();
+  const now2=locationNow();
   const hourly=currentData.hourly.time.map((t,i)=>({
     t:new Date(t),temp:Math.round(currentData.hourly.temperature_2m[i]),
     prob:currentData.hourly.precipitation_probability[i]||0,
@@ -845,7 +859,7 @@ function renderConditions(el){
   // Site notes — show for current location (match saved loc or use currentLabel)
   const noteLocLabel=getNoteLocLabel();
   if(noteLocLabel&&isPro()){
-    const notes=JSON.parse(localStorage.getItem('jw_notes')||'{}');
+    const notes=safeParse(localStorage.getItem('jw_notes'),{});
     const note=notes[noteLocLabel]||'';
     if(note){
       el.innerHTML+=`<div class="site-note-card" id="siteNoteCard">
@@ -1117,7 +1131,7 @@ function buildConditionsContext(){
   const rh=Math.round(c.relative_humidity_2m);
   const rainPct=currentData.daily?.precipitation_probability_max?.[0]||0;
   const alerts=getTradeAlerts(temp,wind,c.precipitation||0,wmo,rh);
-  const now=new Date();
+  const now=locationNow();
   const timeStr=now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
   const sunrise=currentData.daily?.sunrise?.[0]?new Date(currentData.daily.sunrise[0]):null;
   const sunset=currentData.daily?.sunset?.[0]?new Date(currentData.daily.sunset[0]):null;
@@ -1147,13 +1161,13 @@ function buildConditionsContext(){
 
 function getRemainingForeman(){
   const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
+  const stored=safeParse(localStorage.getItem('jw_foreman_usage'),{});
   if(stored.date!==today)return 7;
   return Math.max(0,7-(stored.count||0));
 }
 function incrementForeman(){
   const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('jw_foreman_usage')||'{}');
+  const stored=safeParse(localStorage.getItem('jw_foreman_usage'),{});
   const count=stored.date===today?(stored.count||0)+1:1;
   localStorage.setItem('jw_foreman_usage',JSON.stringify({date:today,count}));
 }
@@ -1209,22 +1223,21 @@ async function submitForemanQuestion(preset){
   if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:var(--muted)">Foreman's thinking...</div></div>`;
 
   const style=localStorage.getItem('jw_foreman_style')||'shooter';
-  const styleInstructions={
-    shooter:'Be direct and blunt. No fluff. Real numbers, real advice. Brief.',
-    light:'Be direct but add dry jobsite humor. Keep it real but make them smile.',
-    facts:'Be purely factual. Numbers and times only, minimal commentary.'
-  };
   const tradeName=(TRADE_CONFIG[currentTrade]||TRADE_CONFIG.general).name;
-  const systemPrompt=`You are a seasoned jobsite foreman with 30 years in the trades. You work for StrickerCo Solutions. You're talking to ${name}, a ${tradeName} worker.\n\nStyle: ${styleInstructions[style]}\n\nOccasionally — not every response — weave in a short piece of field wisdom. Things like: "The way you do one thing is the way you do everything." Keep it subtle, never preachy.\n\nKeep ALL answers under 80 words. Use ${name}'s name once naturally. Be specific — use actual numbers from the conditions.\n\nCurrent conditions at ${currentLabel}: ${buildConditionsContext()}`;
 
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,systemPrompt})});
+    const headers={'Content-Type':'application/json'};
+    try{const _s=await getSession();if(_s&&_s.access_token)headers.Authorization='Bearer '+_s.access_token;}catch(e){}
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers,signal:ctrl.signal,body:JSON.stringify({mode:'advice',question,name,tradeName,style,label:currentLabel,conditions:buildConditionsContext()})});
+    clearTimeout(timer);
+    if(!r.ok)throw new Error('foreman '+r.status);
     const data=await r.json();
     incrementForeman();
     const rem=getRemainingForeman();
     const countDisplay=document.getElementById('foremanCount');
     if(countDisplay)countDisplay.textContent=rem+' question'+(rem===1?'':'s')+' left today';
-    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${(data.answer||'').replace(/"/g,'')}"</div></div>`;
+    if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em">🔨 THE FOREMAN SAYS:</div><div class="foreman-answer">"${esc(data.answer||'')}"</div></div>`;
   }catch(e){
     if(resp)resp.innerHTML=`<div class="foreman-response" style="margin-top:14px"><div style="color:#ff6b6b">Foreman's off the grid. Check conditions manually.</div></div>`;
   }
@@ -1245,14 +1258,8 @@ function closeForemanOverlay(e){if(e.target===document.getElementById('foremanMo
 function closeForeman(){if(!document.getElementById('foremanModal').classList.contains('open'))return;closeForemanSilent();history.back();}
 // project.js — Project Mode full workspace
 
-function getSavedLocs(){return JSON.parse(localStorage.getItem('jw_locs')||'[]');}
+function getSavedLocs(){return safeParse(localStorage.getItem('jw_locs'),[]);}
 
-function deleteLoc(lat,lon){
-  let locs=getSavedLocs();
-  locs=locs.filter(l=>!(Math.abs(l.lat-lat)<0.001&&Math.abs(l.lon-lon)<0.001));
-  localStorage.setItem('jw_locs',JSON.stringify(locs));
-  savedLocs=locs;
-}
 
 function updateProjectPill(){
   const pill=document.getElementById('projectPill');
@@ -1324,7 +1331,7 @@ async function loadProjectSites(){
   if(!sites.length){content.innerHTML=`<div style="text-align:center;padding:40px 16px"><div style="font-size:40px;margin-bottom:12px">📍</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--text);margin-bottom:8px">No job sites yet</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">Add your first site to get started.</div><button onclick="showAddSiteFlow()" style="background:var(--accent);color:#0a1520;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;padding:12px 24px;border:none;border-radius:var(--radius);cursor:pointer;">+ ADD FIRST SITE</button></div>`;return;}
   content.innerHTML='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase">YOUR SITES TODAY</div>';
   const siteData=await Promise.all(sites.map(async site=>{
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
+    try{const r=await fetchT(`https://api.open-meteo.com/v1/forecast?latitude=${site.lat}&longitude=${site.lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code,relative_humidity_2m&hourly=precipitation_probability,temperature_2m,weather_code&forecast_days=2&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`,{},10000);return{...site,weatherData:await r.json()};}catch(e){return{...site,weatherData:null};}
   }));
   // Store last checked + compute statuses for summary
   const siteStatuses=siteData.map(s=>{
@@ -1343,7 +1350,8 @@ async function loadProjectSites(){
 function buildSiteCard(site,index){
   if(!site.weatherData)return`<div style="margin:10px 16px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:14px"><div style="font-size:13px;color:var(--text)">${site.label}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Could not load</div></div>`;
   const c=site.weatherData.current,temp=Math.round(c.temperature_2m),wind=Math.round(c.wind_speed_10m),wmo=c.weather_code,rh=Math.round(c.relative_humidity_2m),precip=c.precipitation||0;
-  const rainPct=site.weatherData.hourly?.precipitation_probability?Math.max(...site.weatherData.hourly.precipitation_probability.slice(0,12)):0;
+  const _pp=(site.weatherData.hourly?.precipitation_probability||[]).slice(0,12).filter(v=>typeof v==='number');
+  const rainPct=_pp.length?Math.max(..._pp):0;
   const alerts=getTradeAlerts(temp,wind,precip,wmo,rh);
   const hasDanger=alerts.some(a=>a.level==='danger'),hasCaution=alerts.some(a=>a.level==='caution');
   const status=hasDanger?'HOLD':hasCaution?'CAUTION':'GO';
@@ -1359,7 +1367,7 @@ function buildSiteCard(site,index){
   return`<div id="pmCard_${index}" style="margin:10px 16px;background:var(--surface3);border:1px solid ${borderColor};border-radius:var(--radius);overflow:hidden">
     <div onclick="toggleSiteCard(${index})" style="padding:14px;cursor:pointer;display:flex;align-items:center;gap:12px">
       <div class="pm-status-dot" style="background:${statusColor}"></div>
-      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${site.projectName||site.label}${(()=>{const n=typeof loadNotesForSite==='function'?loadNotesForSite(site.label).length:0;return n?`<span style="font-size:10px;color:rgba(245,166,35,0.6);margin-left:6px">${n} note${n>1?'s':''}</span>`:''})()}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${site.label}${site.trade?' · '+(TRADE_CONFIG[site.trade]?.name||site.trade):''} · <span style="font-size:9px;color:rgba(255,255,255,0.2)">${(()=>{const lc=localStorage.getItem('jw_site_checked_'+site.label);if(!lc)return'not checked';const m=Math.round((Date.now()-parseInt(lc))/60000);return m<60?m+'m ago':Math.round(m/60)+'h ago';})()}</span></div></div>
+      <div style="flex:1;min-width:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.2">${esc(site.projectName||site.label)}${(()=>{const n=typeof loadNotesForSite==='function'?loadNotesForSite(site.label).length:0;return n?`<span style="font-size:10px;color:rgba(245,166,35,0.6);margin-left:6px">${n} note${n>1?'s':''}</span>`:''})()}</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px">${esc(site.label)}${site.trade?' · '+esc(TRADE_CONFIG[site.trade]?.name||site.trade):''} · <span style="font-size:9px;color:rgba(255,255,255,0.2)">${(()=>{const lc=localStorage.getItem('jw_site_checked_'+site.label);if(!lc)return'not checked';const m=Math.round((Date.now()-parseInt(lc))/60000);return m<60?m+'m ago':Math.round(m/60)+'h ago';})()}</span></div></div>
       <div style="text-align:right;flex-shrink:0"><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;color:${statusColor}">${status}</div><div class="pm-data-label">${temp}°F · ${wind}mph</div></div>
       <div style="color:rgba(255,255,255,0.2);font-size:14px;flex-shrink:0" id="pmChevron_${index}">▼</div>
     </div>
@@ -1423,7 +1431,7 @@ function confirmDeleteSite(label){
   if(!confirm('Remove '+label+'?'))return;
   let locs=getSavedLocs();
   locs=locs.filter(l=>l.label!==label);
-  localStorage.setItem('jw_locs',JSON.stringify(locs));
+  safeSet('jw_locs',JSON.stringify(locs));
   savedLocs=locs;
   loadProjectSites();
 }
@@ -1446,7 +1454,7 @@ function saveSiteMeta(label){
   site.trade=document.getElementById('editTrade')?.value||'general';
   site.gcContact=document.getElementById('editGCContact')?.value?.trim()||'';
   site.crewSize=document.getElementById('editCrewSize')?.value||'';
-  localStorage.setItem('jw_locs',JSON.stringify(sites));savedLocs=sites;
+  safeSet('jw_locs',JSON.stringify(sites));savedLocs=sites;
   loadProjectSites();
 }
 
@@ -1482,7 +1490,7 @@ function confirmAddSite(lat,lon,label){
   const maxLocs=isProject()?10:isCrew()?5:isPro()?5:1;
   if(sites.length>=maxLocs){alert('You\'ve reached your '+maxLocs+' site limit.');return;}
   sites.push({lat,lon,label,projectName:document.getElementById('newProjectName')?.value?.trim()||'',trade:document.getElementById('newTrade')?.value||'general',gcContact:document.getElementById('newGCContact')?.value?.trim()||''});
-  localStorage.setItem('jw_locs',JSON.stringify(sites));savedLocs=sites;
+  safeSet('jw_locs',JSON.stringify(sites));savedLocs=sites;
   loadProjectSites();
 }
 
@@ -1493,14 +1501,14 @@ async function loadProjectCalendar(){
   const sites=getSavedLocs();
   if(!sites.length){content.innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted)">No sites added yet</div>';return;}
   const forecasts=await Promise.all(sites.map(async s=>{
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_probability_max,weathercode,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`);return{...s,forecast:(await r.json()).daily};}catch(e){return{...s,forecast:null};}
+    try{const r=await fetchT(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&daily=precipitation_probability_max,weathercode,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&forecast_days=7&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`,{},10000);return{...s,forecast:(await r.json()).daily};}catch(e){return{...s,forecast:null};}
   }));
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const today=new Date();
   let html='<div style="padding:12px 16px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">7-DAY WORKABILITY</div>';
   html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:0 16px;margin-bottom:4px"><div></div>${Array.from({length:7},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()+i);return`<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.05em">${i===0?'TODAY':days[d.getDay()]}</div>`;}).join('')}</div>`;
   forecasts.forEach(site=>{
     if(!site.forecast)return;
-    html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:4px 16px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${site.projectName||site.label.split(',')[0]}</div>${(site.forecast.weathercode||[]).slice(0,7).map((wmo,i)=>{
+    html+=`<div style="display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px;padding:4px 16px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${esc(site.projectName||site.label.split(',')[0])}</div>${(site.forecast.weathercode||[]).slice(0,7).map((wmo,i)=>{
       const precip=site.forecast.precipitation_probability_max[i]||0;const wind=site.forecast.wind_speed_10m_max[i]||0;const tempMax=site.forecast.temperature_2m_max[i]||50;
       const alerts=getTradeAlerts(tempMax,wind,precip>50?0.5:0,wmo,50);
       const bad=alerts.some(a=>a.level==='danger')||precip>70;const warn=alerts.some(a=>a.level==='caution')||precip>40;
@@ -1537,9 +1545,13 @@ async function summarizeSiteNotes(label,index){
   const userName=localStorage.getItem('jw_user_name')||'Boss';
   const trade=localStorage.getItem('jw_trade')||'general';
   const tradeName=TRADE_CONFIG[trade]?.name||'General Contractor';
-  const systemPrompt='You are a seasoned jobsite foreman with 30 years in the trades working for StrickerCo Solutions. You are reviewing job site notes for '+userName+', a '+tradeName+'.\n\nSummarize these notes in plain English — weather patterns, recurring issues, best working windows, notable delays, and the overall site weather story so far. Be specific, use the dates. Keep it under 100 words. Sound like a foreman talking to another foreman, not a report.\n\nJob site: '+label+'\nNotes:\n'+notesText;
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Summarize the weather and site conditions history for '+label+' based on these notes.',systemPrompt})});
+    const headers={'Content-Type':'application/json'};
+    try{const _s=await getSession();if(_s&&_s.access_token)headers.Authorization='Bearer '+_s.access_token;}catch(e){}
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/foreman',{method:'POST',headers,signal:ctrl.signal,body:JSON.stringify({mode:'summary',name:userName,tradeName,label,notesText})});
+    clearTimeout(timer);
+    if(!r.ok)throw new Error('summary '+r.status);
     const data=await r.json();
     output.textContent=data.answer||'Could not generate summary right now.';
     output.style.display='block';btn.textContent='🔨 REFRESH SUMMARY';btn.style.opacity='1';btn.disabled=false;
@@ -1618,7 +1630,7 @@ function openSettings(){
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Morning briefing</div>
         <div class="notify-row">
-          <div><div class="notify-label">5AM nudge</div><div class="notify-sub">Check conditions before the day starts</div></div>
+          <div><div class="notify-label">Morning briefing</div><div class="notify-sub">Weather recap when you open the app in the morning</div></div>
           <label class="toggle"><input type="checkbox" id="s-briefing" ${briefingOn?'checked':''}><span class="toggle-slider"></span></label>
         </div>
       </div>
@@ -1712,12 +1724,23 @@ function saveSettings(){
 }
 
 async function restorePro(){
-  const email=document.getElementById('restoreEmail')?.value?.trim();
   const status=document.getElementById('restoreStatus');
-  if(!email){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email first.</span>';return;}
+  const session=await getSession();
+  // Entitlement is granted from the email on your VERIFIED session, never from a
+  // typed address (audit H1). If not signed in, send a magic link — restore then
+  // runs automatically via handleAuthCallback when you return.
+  if(!session||!session.access_token){
+    const email=document.getElementById('restoreEmail')?.value?.trim();
+    if(!email||!email.includes('@')){if(status)status.innerHTML='<span style="color:#ff6b6b">Enter your payment email — we\'ll send a secure sign-in link.</span>';return;}
+    if(status)status.innerHTML='<span style="color:var(--muted)">Sending sign-in link...</span>';
+    const sent=await signInWithMagicLink(email);
+    if(sent)localStorage.setItem('jw_auth_email',email);
+    if(status)status.innerHTML=sent?'<span style="color:var(--safe)">✓ Check your email for a sign-in link. Pro restores automatically once you\'re back.</span>':'<span style="color:#ff6b6b">Could not send link. Try again.</span>';
+    return;
+  }
   if(status)status.innerHTML='<span style="color:var(--muted)">Checking...</span>';
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({})});
     const data=await r.json();
     if(data.success){
       localStorage.setItem('jw_pro','true');
@@ -1733,10 +1756,11 @@ async function restorePro(){
 }
 
 async function claimFoundingCrewBenefit(){
-  const email=localStorage.getItem('jw_auth_email')||localStorage.getItem('jw_restore_email');
-  if(!email){showToast('Sign in first to claim your benefit.',3000);return;}
+  const session=await getSession();
+  if(!session||!session.access_token){showToast('Sign in first to claim your benefit.',3000);return;}
+  const email=session.user?.email||localStorage.getItem('jw_auth_email');
   try{
-    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch('https://jobsiteweather.app/.netlify/functions/restore-pro',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({})});
     const d=await r.json();
     if(d.success){
       localStorage.setItem('jw_crew','true');localStorage.setItem('jw_crew_activated',Date.now().toString());localStorage.setItem('jw_crew_founding','true');localStorage.setItem('jw_crew_expires',(Date.now()+365*24*60*60*1000).toString());
@@ -1773,31 +1797,33 @@ function checkPushAlerts(tradeAlerts,nws){
   }
 }
 // ── MORNING BRIEFING ──────────────────────────────────────
+// M3: the old version scheduled the notification with a multi-hour setTimeout that
+// no PWA/tab survives, so it almost never fired. A reliable 5AM push needs Web Push
+// (VAPID + server) — see HUMAN_TASKS. Until then this delivers an honest, reliable
+// briefing when the crew OPENS the app in the morning (and, as a bonus, an OS
+// notification if permission is already granted while the app is open).
 function scheduleMorningBriefing(){
-  if(Notification.permission!=='granted')return;
   if(localStorage.getItem('jw_morning_briefing')==='false')return;
-  const lastScheduled=localStorage.getItem('jw_briefing_scheduled');
   const today=new Date().toDateString();
-  if(lastScheduled===today)return;
-  const now=new Date();
-  const tomorrow5am=new Date();
-  tomorrow5am.setDate(tomorrow5am.getDate()+1);
-  tomorrow5am.setHours(5,0,0,0);
-  const msUntil5am=tomorrow5am-now;
-  setTimeout(()=>{
-    const nm=localStorage.getItem('jw_user_name')||'Boss';
-    const trade=localStorage.getItem('jw_trade')||'general';
-    const tradeNames={general:'your crew',roofing:'the roofing crew',concrete:'the concrete crew',electrical:'the electrical crew',plumbing:'the plumbing crew',hvac:'the HVAC crew',framing:'the framing crew',painting:'the painting crew',landscaping:'the landscaping crew',excavation:'the excavation crew',farming:'the farming operation'};
-    new Notification(`Morning ${nm} — JobSite Weather`,{body:`Time to check conditions for ${tradeNames[trade]||'your crew'}. Tap to see what the day looks like.`,icon:'/icons/icon-192.png',badge:'/icons/icon-72.png',tag:'morning-briefing',renotify:false});
-    localStorage.setItem('jw_briefing_scheduled',new Date().toDateString());
-  },msUntil5am);
-  localStorage.setItem('jw_briefing_scheduled',today);
+  if(localStorage.getItem('jw_briefing_shown')===today)return;
+  const hr=new Date().getHours();
+  if(hr<5||hr>=11)return;            // morning window only
+  if(!currentData||!currentData.current)return;
+  localStorage.setItem('jw_briefing_shown',today);
+  const nm=localStorage.getItem('jw_user_name')||'Boss';
+  const c=currentData.current;
+  const temp=Math.round(c.temperature_2m);
+  const wind=kmh2mph(Math.round(c.wind_speed_10m));
+  const alerts=getTradeAlerts(temp,wind,c.precipitation||0,c.weather_code,Math.round(c.relative_humidity_2m));
+  const head=alerts.some(a=>a.level==='danger')?'Heads up today':alerts.length?'Take note today':'Clear to work';
+  if(typeof showToast==='function')showToast(`🌅 Morning ${nm}. ${head}: ${temp}°F, wind ${wind}mph at ${esc(currentLabel)}.`,5000);
+  try{if(window.Notification&&Notification.permission==='granted'){new Notification(`Morning ${nm} — JobSite Weather`,{body:`${head}: ${temp}°F, wind ${wind}mph.`,icon:'/icons/icon-192.png',badge:'/icons/icon-72.png',tag:'morning-briefing'});}}catch(e){}
 }
 // ── SUPABASE ──────────────────────────────────────────────
 const SUPABASE_URL='https://jfpyrlregzwmvltrhgfq.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmcHlybHJlZ3p3bXZsdHJoZ2ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzcyOTMsImV4cCI6MjA5MDgxMzI5M30.YDLYIk4n6X7mBYYpk5fkEe0MeS3KqrB4wDhcwmD5iKs';
 let sb=null;
-try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);console.log('[Supabase] Client initialized');}catch(e){console.warn('[Supabase] Init failed, running without:',e.message);}
+try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){}
 
 // ── CONSTANTS ──────────────────────────────────────────────
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Severe storm'};
@@ -1828,12 +1854,12 @@ const TRADE_CONFIG={
 
 // ── STATE ──────────────────────────────────────────────────
 let currentData=null,currentLabel='',currentLat=null,currentLon=null;
-let savedLocs=JSON.parse(localStorage.getItem('jw_locs')||'[]');
+let savedLocs=safeParse(localStorage.getItem('jw_locs'),[]);
 let activeLoc=null,currentTrade='general',nwsAlerts=[];
 let activeTab='conditions';
 let tomorrowHourly=[];
 let currentDayIndex=null;
-let notifySettings=JSON.parse(localStorage.getItem('jw_notify')||'{"severe":true,"wind":false,"rain":false}');
+let notifySettings=safeParse(localStorage.getItem('jw_notify'),{severe:true,wind:false,rain:false});
 
 // ── UTILS ──────────────────────────────────────────────────
 const kmh2mph=k=>Math.round(k*0.621371);
@@ -1872,7 +1898,8 @@ window.addEventListener('popstate',()=>{
   } else if(activeTab!=='conditions'){
     activeTab='conditions';
     ['conditions','forecast','foreman'].forEach(t=>{
-      document.getElementById('tab-'+t)?.classList.toggle('active',t==='conditions');
+      const el=document.getElementById('tab-'+t);
+      if(el){el.classList.toggle('active',t==='conditions');el.setAttribute('aria-selected',String(t==='conditions'));}
     });
     renderCurrentTab();
   }
@@ -1883,7 +1910,8 @@ function switchTab(tab){
   if(tab!=='conditions'&&activeTab==='conditions')navPush('tab');
   activeTab=tab;
   ['conditions','forecast','foreman'].forEach(t=>{
-    document.getElementById('tab-'+t)?.classList.toggle('active',t===tab);
+    const el=document.getElementById('tab-'+t);
+    if(el){el.classList.toggle('active',t===tab);el.setAttribute('aria-selected',String(t===tab));}
   });
   renderCurrentTab();
 }
@@ -2018,10 +2046,16 @@ if(typeof handleCrewInviteCallback==='function')handleCrewInviteCallback();
     else if(dx>0&&cur>0)switchTab(TABS[cur-1]);
   },{passive:true});
 })();
-if('serviceWorker' in navigator){
+// Register the service worker only for the real web PWA. Inside the Capacitor
+// native shell the origin is https://localhost served from bundled assets — a SW
+// there is useless at best and a stale-cache trap across AAB updates at worst (M1).
+if('serviceWorker' in navigator && !(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/sw.js').catch(()=>{});
   });
+} else if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()&&'serviceWorker' in navigator){
+  // Native build: proactively unregister any SW a prior web-mode install left behind.
+  navigator.serviceWorker.getRegistrations?.().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
 }
 
 (async()=>{
@@ -2050,7 +2084,8 @@ if('serviceWorker' in navigator){
       async pos=>{await loadByLatLon(pos.coords.latitude,pos.coords.longitude,'Your location');},
       async()=>{
         document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';
-      }
+      },
+      {enableHighAccuracy:false,timeout:10000,maximumAge:600000}
     );
   } else {
     document.getElementById('content').innerHTML='<div class="error-state">Enter a ZIP code above to get started.</div>';

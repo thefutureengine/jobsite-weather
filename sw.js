@@ -1,10 +1,11 @@
-const CACHE_NAME = 'jobsite-wx-v16';
+const CACHE_NAME = 'jobsite-wx-v17';
 const PRECACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/app-bundle.js'
+  '/js/app-bundle.js',
+  '/js/vendor/supabase.min.js'
 ];
 
 self.addEventListener('install', e => {
